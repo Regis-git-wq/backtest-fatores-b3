@@ -1,123 +1,142 @@
-# Backtest de Estratégias Fatoriais na B3
+<div align="center">
+
+# Fatores na B3: Momentum e Baixa Volatilidade
+
+**Backtest de estratégias fatoriais no mercado acionário brasileiro (2011–2025)**
 
 [![Rodar backtest](https://github.com/Regis-git-wq/backtest-fatores-b3/actions/workflows/backtest.yml/badge.svg)](https://github.com/Regis-git-wq/backtest-fatores-b3/actions/workflows/backtest.yml)
 [![Abrir no Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Regis-git-wq/backtest-fatores-b3/blob/main/rodar_no_colab.ipynb)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
-Este projeto testa se estratégias de **momentum** e **baixa volatilidade** geraram retorno acima do mercado brasileiro de 2011 a 2025, com custos de transação, testes de significância e regressões de alfa.
+🇧🇷 Português · [🇺🇸 English](README.en.md)
 
-> **Status:** v1, com fatores de preço. Em desenvolvimento: fatores de valor e qualidade com dados da CVM.
+</div>
 
-## Pergunta de pesquisa
+---
 
-Fatores documentados na literatura internacional (Jegadeesh & Titman, 1993; Ang et al., 2006; Frazzini & Pedersen, 2014) geram prêmio no mercado acionário brasileiro depois dos custos de transação?
+Estratégias de **momentum** e **baixa volatilidade**, documentadas na literatura internacional, funcionam na B3? Este projeto responde com um backtest de 15 anos, líquido de custos de transação, com testes de significância e regressões de alfa.
 
-## Resultados
+<p align="center">
+  <img src="resultados/destaque.png" alt="Patrimônio acumulado do melhor tercil de cada estratégia contra o universo e o CDI" width="100%">
+</p>
 
-Fev/2011 a dez/2025 (179 meses), retornos mensais líquidos de custos. As carteiras são tercis igualmente ponderados.
+## Principais resultados
 
-| Carteira | Retorno a.a. | Volatilidade a.a. | Sharpe | Drawdown máx. |
-|---|---:|---:|---:|---:|
-| Momentum: melhor tercil | 16,7% | 21,0% | 0,41 | −41,3% |
-| Momentum: pior tercil | 4,2% | 28,7% | −0,04 | −67,6% |
-| Baixa vol.: tercil menos volátil | 14,8% | 16,9% | 0,36 | −30,7% |
-| Baixa vol.: tercil mais volátil | 5,6% | 32,8% | 0,05 | −66,7% |
-| Universo (pesos iguais) | 11,9% | 22,0% | 0,20 | −36,5% |
-| CDI | 9,7% | — | — | — |
+| | Momentum | Baixa volatilidade | Universo (pesos iguais) | CDI |
+|---|:---:|:---:|:---:|:---:|
+| **Retorno a.a.** | **16,7%** | 14,8% | 11,9% | 9,7% |
+| **Volatilidade a.a.** | 21,0% | **16,9%** | 22,0% | — |
+| **Sharpe** | **0,41** | 0,36 | 0,20 | — |
+| **Drawdown máximo** | −41,3% | **−30,7%** | −36,5% | — |
+| **Alfa a.a. (CAPM)** | **+4,9%** \* | +3,0% | — | — |
 
-**Alfas (CAPM, mercado = universo com pesos iguais, erros Newey-West):**
+<sub>Melhor tercil de cada estratégia, fev/2011–dez/2025, rebalanceamento mensal, líquido de custos. \* significativo a 5%.</sub>
 
-| Estratégia | Alfa a.a. do melhor tercil | t | Alfa a.a. long-short | t |
-|---|---:|---:|---:|---:|
-| Momentum | 4,9% | 2,08 | 11,9% | 2,55 |
-| Baixa volatilidade | 3,0% | 1,64 | 7,9% | 1,94 |
-| Combinado | 3,5% | 2,05 | 9,7% | 2,35 |
+- 📈 **Momentum gera alfa.** O melhor tercil supera o mercado em 4,9% a.a. ajustado ao risco (t = 2,08). A carteira long-short, que compra o melhor tercil e vende o pior, chega a 11,9% a.a. (t = 2,55).
+- 🛡️ **Baixa volatilidade entrega retorno de mercado com menos risco.** Tem a menor volatilidade e o menor drawdown entre todas as carteiras, com alfa no limite da significância (t = 1,64).
+- ⚖️ **As carteiras long-short têm beta negativo** (−0,37 no momentum e −0,73 na baixa volatilidade): as ações perdedoras e as mais voláteis são mais sensíveis ao mercado.
 
-**Leitura:**
-- **Momentum** tem o resultado mais forte. O long-short (compra o melhor tercil e vende o pior) rende alfa de cerca de 12% a.a., significativo a 5%.
-- **Baixa volatilidade** entrega retorno parecido com o do universo, mas com bem menos risco: a menor volatilidade e o menor drawdown entre todas as carteiras. O alfa fica no limite da significância (t ≈ 1,6 a 1,9).
-- As carteiras long-short têm beta de mercado negativo (−0,37 no momentum e −0,73 na baixa volatilidade), porque o pior tercil é mais sensível ao mercado do que o melhor.
+<p align="center">
+  <img src="resultados/alfas.png" alt="Alfa anual com intervalo de confiança de 95%" width="100%">
+</p>
 
-![Momentum](resultados/acumulado_Momentum.png)
-![Baixa volatilidade](resultados/acumulado_Baixa_Vol.png)
+<details>
+<summary><b>📊 Gráficos por estratégia</b></summary>
+<br>
 
-Tabelas completas em [`resultados/`](resultados/): `metricas.csv`, `regressoes_alfa.csv` e os retornos mensais de cada estratégia.
+<img src="resultados/acumulado_Momentum.png" width="100%">
+<img src="resultados/drawdown_Momentum.png" width="100%">
+<img src="resultados/acumulado_Baixa_Vol.png" width="100%">
+<img src="resultados/drawdown_Baixa_Vol.png" width="100%">
+<img src="resultados/acumulado_Combinado.png" width="100%">
+<img src="resultados/drawdown_Combinado.png" width="100%">
+
+</details>
+
+Tabelas completas em [`resultados/`](resultados/). Os CSVs abrem direto no Excel.
 
 ## Metodologia
 
 | Etapa | Escolha |
 |---|---|
-| Universo | 61 ações líquidas da B3 (ver `config.py`) |
-| Período | 2011–2025, mensal (2010 é usado só para calcular os primeiros sinais) |
-| Elegibilidade | ≥ 1 ano de histórico, volume financeiro mediano ≥ R$ 5 mi/dia, preço ≥ R$ 1 |
-| Momentum 12-1 | Retorno acumulado de t-11 a t-1, pulando o mês mais recente, que costuma reverter |
-| Baixa volatilidade | Volatilidade diária anualizada dos últimos 252 pregões (sinal invertido) |
-| Combinado | Média dos z-scores dos dois sinais |
-| Carteiras | Tercis igualmente ponderados, rebalanceamento mensal |
-| Custos | 10 bps por lado sobre o giro efetivo, considerando a variação dos pesos ao longo do mês |
-| Benchmark | Carteira igualmente ponderada de todas as ações elegíveis, com dividendos e os mesmos custos. O Ibovespa do Yahoo é um índice de preço, sem dividendos, e aparece só como referência |
-| Taxa livre de risco | CDI (série SGS 12 do Banco Central) |
-| Inferência | Alfa de CAPM e, opcionalmente, do modelo de 5 fatores do NEFIN-USP, com erros-padrão Newey-West (6 defasagens) |
+| **Universo** | 61 ações líquidas da B3 |
+| **Período** | Fev/2011 a dez/2025 (179 meses); 2010 serve só para calcular os primeiros sinais |
+| **Elegibilidade** | ≥ 1 ano de histórico, volume financeiro mediano ≥ R$ 5 mi/dia, preço ≥ R$ 1 |
+| **Momentum 12-1** | Retorno acumulado dos últimos 12 meses, excluindo o mais recente, que tende a reverter |
+| **Baixa volatilidade** | Volatilidade diária anualizada dos últimos 252 pregões |
+| **Combinado** | Média dos z-scores dos dois sinais |
+| **Carteiras** | Tercis com pesos iguais, rebalanceamento mensal |
+| **Custos** | 10 bps por lado sobre o giro efetivo |
+| **Benchmark** | Todas as ações elegíveis com pesos iguais, com dividendos e custos (comparação justa com as carteiras) |
+| **Taxa livre de risco** | CDI (Banco Central, série SGS 12) |
+| **Inferência** | Alfa de CAPM com erros-padrão Newey-West; modelo de 5 fatores do NEFIN-USP opcional |
 
-O sinal é sempre calculado com informação disponível até o fim do mês *t*, e a carteira é mantida durante *t+1*.
+O sinal usa apenas informação disponível até o fim do mês *t*, e a carteira é mantida em *t+1*.
 
-## Validação
+<details>
+<summary><b>🧪 Validação: como sei que o código não "vê o futuro"</b></summary>
+<br>
 
-`tests/test_pipeline.py` faz três checagens de sanidade com um mercado simulado:
+`tests/test_pipeline.py` roda três testes num mercado simulado:
 
-1. **Sinal aleatório:** a carteira long-short não tem retorno significativo (t ≈ 0).
-2. **Sinal que vê o futuro:** o retorno sai absurdo, o que confirma que o alinhamento temporal funciona. O código só ganha dinheiro "de graça" quando recebe informação de *t+1*.
+1. **Sinal aleatório:** a long-short não tem retorno significativo (t ≈ 0).
+2. **Sinal que espia o mês seguinte:** o retorno sai absurdo. Isso confirma o alinhamento temporal, porque o código só ganha "de graça" quando recebe informação do futuro.
 3. **Sem look-ahead:** os sinais de uma data não mudam quando os dados posteriores são apagados.
 
-O mercado simulado (`tests/dados_sinteticos.py`) embute um efeito de momentum conhecido, e o backtest o recupera (long-short com t ≈ 2,2).
+O mercado simulado embute um efeito de momentum conhecido, e o backtest o recupera (t ≈ 2,2). Os testes rodam automaticamente no GitHub Actions a cada alteração do código.
+
+</details>
 
 ## Como rodar
 
-**Sem instalar nada:** clique em *Open in Colab* (no topo da página) e depois em *Ambiente de execução → Executar tudo*.
+| Opção | Como |
+|---|---|
+| **Navegador** (sem instalar nada) | [Abrir no Colab](https://colab.research.google.com/github/Regis-git-wq/backtest-fatores-b3/blob/main/rodar_no_colab.ipynb) → *Ambiente de execução → Executar tudo* |
+| **GitHub** | *Actions → Rodar backtest → Run workflow*; os resultados são salvos em `resultados/` |
+| **Computador** | `pip install -r requirements.txt` e depois `python main.py` (ou `python main.py --sintetico` para rodar offline) |
 
-**No computador:**
-
-```bash
-pip install -r requirements.txt
-python -m tests.test_pipeline   # testes de sanidade
-python main.py --sintetico      # pipeline completo com dados simulados
-python main.py                  # dados reais (Yahoo Finance e Banco Central; cache em data/)
-```
-
-**No GitHub:** o backtest roda sozinho (GitHub Actions) a cada mudança no código, e os resultados são salvos em `resultados/`. Para rodar manualmente, vá em *Actions → Rodar backtest → Run workflow*.
-
-Saídas geradas:
-- `metricas.csv`: retorno, volatilidade, Sharpe, estatística t, drawdown e giro de cada carteira
-- `regressoes_alfa.csv`: alfas e betas com estatísticas t e p-valores
-- `retornos_<estratégia>.csv`: retornos mensais de todas as carteiras
-- `acumulado_*.png` e `drawdown_*.png`: gráficos
-- `retornos_suspeitos.csv`: retornos diários acima de ±50%, para auditar erros de ajuste do Yahoo
-
-**Fatores NEFIN (opcional):** monte um CSV mensal com as colunas `date, Rm_minus_Rf, SMB, HML, WML, IML` (em decimal), a partir dos dados de nefin.com.br, e salve em `data/nefin_factors.csv`.
-
-## Estrutura
+<details>
+<summary><b>📁 Estrutura do projeto</b></summary>
 
 ```
 config.py              parâmetros (universo, período, filtros, custos)
 main.py                executa o backtest e gera tabelas e gráficos
-src/dados.py           download e cache de preços, CDI e fatores NEFIN
+src/dados.py           download e cache de preços (Yahoo Finance), CDI (BCB) e fatores NEFIN
 src/fatores.py         sinais e filtro de elegibilidade
 src/carteiras.py       formação das carteiras, retornos, giro e custos
 src/metricas.py        métricas de desempenho e regressões
+src/graficos.py        gráficos
 tests/                 mercado simulado e testes de sanidade
 rodar_no_colab.ipynb   roda o projeto no Google Colab
+resultados/            saídas da última execução (CSV e PNG)
 ```
+
+</details>
 
 ## Limitações
 
-- **Viés de sobrevivência:** o universo usa empresas listadas hoje, e o Yahoo não traz ações deslistadas. Isso tende a inflar os retornos absolutos. O efeito é menor nas comparações entre tercis e contra o universo, que compartilham o mesmo viés. *Correção planejada:* composição histórica do Ibovespa.
-- **Qualidade dos dados do Yahoo:** há 10 retornos diários acima de ±50% ([`retornos_suspeitos.csv`](resultados/retornos_suspeitos.csv)). Parte deles é evento real, como as cisões do GPA (PCAR3) em 2021 e 2023, e parte parece erro de ajuste de proventos. Ainda não foram corrigidos.
-- **Ações que deixam de negociar** no meio do mês entram com retorno zero naquele mês.
-- **Universo pequeno:** tercis de cerca de 20 ações deixam os resultados sensíveis a poucas empresas.
-- **Custos simplificados:** o custo é fixo em bps e não modela o impacto de mercado.
+- **Viés de sobrevivência:** o universo usa empresas listadas hoje, o que infla os retornos absolutos. O efeito é menor nas comparações entre tercis e contra o universo, que compartilham o mesmo viés.
+- **Dados do Yahoo Finance:** há 10 retornos diários acima de ±50% ([lista](resultados/retornos_suspeitos.csv)). Parte é evento real, como as cisões do GPA, e parte parece erro de ajuste.
+- **Universo pequeno:** com tercis de cerca de 20 ações, os resultados ficam sensíveis a poucas empresas.
+- **Custos simplificados:** o custo é fixo em bps, sem modelar o impacto de mercado.
 
 ## Próximos passos
 
-- [ ] Fatores de **valor** (book-to-market, lucro/preço) e **qualidade** (ROE, alavancagem) com demonstrações da CVM, respeitando a defasagem de divulgação
-- [ ] Universo pela composição histórica do Ibovespa
+- [ ] Fatores de **valor** e **qualidade** com demonstrações financeiras da CVM
+- [ ] Universo pela composição histórica do Ibovespa, para eliminar o viés de sobrevivência
 - [ ] Robustez: subperíodos, ponderação por valor de mercado, quintis, custos de 0 a 50 bps
 - [ ] Desempenho em ciclos de alta e queda da Selic
+
+## Referências
+
+- Jegadeesh, N.; Titman, S. (1993). Returns to Buying Winners and Selling Losers. *Journal of Finance*.
+- Ang, A.; Hodrick, R.; Xing, Y.; Zhang, X. (2006). The Cross-Section of Volatility and Expected Returns. *Journal of Finance*.
+- Frazzini, A.; Pedersen, L. H. (2014). Betting Against Beta. *Journal of Financial Economics*.
+- NEFIN-USP: fatores de risco para o mercado brasileiro.
+
+---
+
+<div align="center">
+<sub>Feito por <a href="https://github.com/Regis-git-wq">Reginaldo</a>, estudante de Ciências Econômicas no Ibmec-SP · Licença MIT</sub>
+</div>

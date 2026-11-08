@@ -9,13 +9,10 @@ from __future__ import annotations
 import argparse
 import os
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
 
 import config as cfg
-from src import dados, fatores, carteiras, metricas
+from src import dados, fatores, carteiras, metricas, graficos
 
 RESULTS = "results"
 MARKET = "Universo EW"  # carteira igualmente ponderada de todas as ações elegíveis
@@ -35,35 +32,6 @@ def load_data(synthetic: bool):
     px = dados.download_prices(cfg.TICKERS, cfg.START_DATE, cfg.END_DATE, cfg.BENCHMARK)
     cdi = dados.download_cdi(cfg.START_DATE, cfg.END_DATE)
     return px, cdi
-
-
-def plot_cumulative(rets: pd.DataFrame, title: str, path: str):
-    labels = {f"G{cfg.N_GROUPS}": f"Melhor grupo (G{cfg.N_GROUPS})", "G1": "Pior grupo (G1)"}
-    fig, ax = plt.subplots(figsize=(10, 5))
-    (1 + rets).cumprod().rename(columns=labels).plot(ax=ax, logy=True, lw=1.6)
-    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:.1f}"))
-    ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
-    ax.set_title(title)
-    ax.set_ylabel("R$ 1 investido (escala log)")
-    ax.set_xlabel("")
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-
-
-def plot_drawdown(rets: pd.DataFrame, title: str, path: str):
-    w = (1 + rets).cumprod()
-    dd = w / w.cummax() - 1
-    fig, ax = plt.subplots(figsize=(10, 4))
-    dd.plot(ax=ax, lw=1.2)
-    ax.set_title(title)
-    ax.set_xlabel("")
-    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
 
 
 def main(synthetic: bool = False):
@@ -97,7 +65,7 @@ def main(synthetic: bool = False):
 
     nefin = dados.load_nefin(cfg.NEFIN_FILE)
     mkt_excess = (market - rf).rename("Mercado").to_frame()
-    all_summaries, all_alphas = [], []
+    all_summaries, all_alphas, all_rets = [], [], {}
     top = f"G{cfg.N_GROUPS}"
 
     for name, sig in signals.items():
@@ -113,6 +81,7 @@ def main(synthetic: bool = False):
         summ.insert(0, "Estratégia", name)
         all_summaries.append(summ)
         save_csv(rets, f"{RESULTS}/retornos_{name}.csv", index_label="Mês")
+        all_rets[name] = rets
 
         # Alfa do melhor grupo (em excesso ao CDI) e da long-short (autofinanciada)
         for port in [top, "Long-Short"]:
@@ -127,16 +96,16 @@ def main(synthetic: bool = False):
                 a.insert(0, "estrategia", name)
                 all_alphas.append(a)
 
-        plot_cumulative(rets[[top, "G1", MARKET, "CDI"]],
-                        f"{name}: carteiras extremas vs universo e CDI",
-                        f"{RESULTS}/acumulado_{name}.png")
-        plot_drawdown(rets[[top, MARKET]], f"{name}: drawdown", f"{RESULTS}/drawdown_{name}.png")
+        graficos.cumulative(rets, name, top, MARKET, f"{RESULTS}/acumulado_{name}.png")
+        graficos.drawdown(rets, name, top, MARKET, f"{RESULTS}/drawdown_{name}.png")
 
     summary = pd.concat(all_summaries)
     summary["Meses"] = summary["Meses"].astype(int)
     alphas = pd.concat(all_alphas)
     save_csv(summary, f"{RESULTS}/metricas.csv", index_label="Carteira")
     save_csv(alphas, f"{RESULTS}/regressoes_alfa.csv", index_label="Termo")
+    graficos.hero(all_rets, top, MARKET, f"{RESULTS}/destaque.png")
+    graficos.alpha_plot(alphas, top, f"{RESULTS}/alfas.png")
 
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", 20)
