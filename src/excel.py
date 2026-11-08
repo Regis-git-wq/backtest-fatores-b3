@@ -20,6 +20,19 @@ from openpyxl.formatting.rule import ColorScaleRule, CellIsRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+
+def _date_axis(chart, label_low: bool = False):
+    """Eixo X de datas. O eixo Y precisa apontar para o id do eixo de datas (500);
+    sem isso o Excel considera o arquivo corrompido."""
+    chart.x_axis = DateAxis(crossAx=100)
+    chart.x_axis.number_format = "yyyy"
+    chart.x_axis.majorTimeUnit = "years"
+    chart.y_axis.crossAx = 500
+    chart.x_axis.delete = False
+    chart.y_axis.delete = False
+    if label_low:
+        chart.x_axis.tickLblPos = "low"
+
 FONT = "Arial"
 NAVY = "1F3864"
 LIGHT = "D9E1F2"
@@ -241,7 +254,7 @@ def _estrategia(wb, name: str, rets: pd.DataFrame, n_groups: int):
     # retornos negativos em vermelho
     rng = f"{get_column_letter(c_ret)}{D}:{get_column_letter(c_ret + n_cols - 1)}{last}"
     ws.conditional_formatting.add(rng, CellIsRule(operator="lessThan", formula=["0"],
-                                                  font=Font(name=FONT, size=9, color="C00000")))
+                                                  font=Font(color="C00000")))
 
     # gráficos nativos do Excel (ao lado das tabelas)
     show = [p for p in ports if p not in ("Long-Short",)]
@@ -255,9 +268,7 @@ def _estrategia(wb, name: str, rets: pd.DataFrame, n_groups: int):
         ref = Reference(ws, min_col=c_cum + j, min_row=H, max_row=last)
         chart.add_data(ref, titles_from_data=True)
     chart.set_categories(Reference(ws, min_col=1, min_row=D, max_row=last))
-    chart.x_axis = DateAxis(crossAx=100)
-    chart.x_axis.number_format = "yyyy"
-    chart.x_axis.majorTimeUnit = "years"
+    _date_axis(chart)
     for s in chart.series:
         s.smooth = False
         s.graphicalProperties.line.width = 20000
@@ -273,10 +284,7 @@ def _estrategia(wb, name: str, rets: pd.DataFrame, n_groups: int):
             j = ports.index(p)
             ch2.add_data(Reference(ws, min_col=c_dd + j, min_row=H, max_row=last), titles_from_data=True)
     ch2.set_categories(Reference(ws, min_col=1, min_row=D, max_row=last))
-    ch2.x_axis = DateAxis(crossAx=100)
-    ch2.x_axis.number_format = "yyyy"
-    ch2.x_axis.majorTimeUnit = "years"
-    ch2.x_axis.tickLblPos = "low"  # datas embaixo do gráfico, não na linha do zero
+    _date_axis(ch2, label_low=True)  # datas embaixo do gráfico, não na linha do zero
     for s in ch2.series:
         s.smooth = False
     ws.add_chart(ch2, "B23")
@@ -287,9 +295,7 @@ def _estrategia(wb, name: str, rets: pd.DataFrame, n_groups: int):
     j = ports.index("Long-Short")
     ch3.add_data(Reference(ws, min_col=c_cum + j, min_row=H, max_row=last), titles_from_data=True)
     ch3.set_categories(Reference(ws, min_col=1, min_row=D, max_row=last))
-    ch3.x_axis = DateAxis(crossAx=100)
-    ch3.x_axis.number_format = "yyyy"
-    ch3.x_axis.majorTimeUnit = "years"
+    _date_axis(ch3)
     ch3.series[0].smooth = False
     ch3.legend = None
     ws.add_chart(ch3, "M4")
