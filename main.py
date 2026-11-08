@@ -21,6 +21,13 @@ RESULTS = "results"
 MARKET = "Universo EW"  # carteira igualmente ponderada de todas as ações elegíveis
 
 
+def save_csv(df: pd.DataFrame, path: str, index: bool = True, index_label: str | None = None):
+    """Salva CSV no padrão do Excel em português: colunas separadas por ';',
+    vírgula decimal, 4 casas e codificação que preserva os acentos (UTF-8 com BOM)."""
+    df.round(4).to_csv(path, sep=";", decimal=",", encoding="utf-8-sig",
+                       index=index, index_label=index_label, date_format="%Y-%m-%d")
+
+
 def load_data(synthetic: bool):
     if synthetic:
         from tests.dados_sinteticos import gerar
@@ -69,7 +76,7 @@ def main(synthetic: bool = False):
     rf = dados.cdi_monthly(cdi_daily)
 
     if not synthetic:
-        dados.flag_suspicious_returns(adj).to_csv(f"{RESULTS}/retornos_suspeitos.csv", index=False)
+        save_csv(dados.flag_suspicious_returns(adj), f"{RESULTS}/retornos_suspeitos.csv", index=False)
 
     elig = fatores.eligibility(adj, close, vol, cfg.MIN_HISTORY_DAYS,
                                cfg.MIN_MEDIAN_VOLUME_BRL, cfg.MIN_PRICE_BRL)
@@ -105,7 +112,7 @@ def main(synthetic: bool = False):
         summ["Giro mensal médio"] = bt["turnover"].mean().reindex(summ.index)
         summ.insert(0, "Estratégia", name)
         all_summaries.append(summ)
-        rets.to_csv(f"{RESULTS}/retornos_{name}.csv")
+        save_csv(rets, f"{RESULTS}/retornos_{name}.csv", index_label="Mês")
 
         # Alfa do melhor grupo (em excesso ao CDI) e da long-short (autofinanciada)
         for port in [top, "Long-Short"]:
@@ -126,9 +133,10 @@ def main(synthetic: bool = False):
         plot_drawdown(rets[[top, MARKET]], f"{name}: drawdown", f"{RESULTS}/drawdown_{name}.png")
 
     summary = pd.concat(all_summaries)
+    summary["Meses"] = summary["Meses"].astype(int)
     alphas = pd.concat(all_alphas)
-    summary.to_csv(f"{RESULTS}/metricas.csv")
-    alphas.to_csv(f"{RESULTS}/regressoes_alfa.csv")
+    save_csv(summary, f"{RESULTS}/metricas.csv", index_label="Carteira")
+    save_csv(alphas, f"{RESULTS}/regressoes_alfa.csv", index_label="Termo")
 
     pd.set_option("display.width", 200)
     pd.set_option("display.max_columns", 20)
