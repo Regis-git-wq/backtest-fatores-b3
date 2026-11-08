@@ -9,7 +9,6 @@
 import numpy as np
 import pandas as pd
 
-import config as cfg
 from src import dados, fatores, carteiras
 from tests.dados_sinteticos import gerar
 

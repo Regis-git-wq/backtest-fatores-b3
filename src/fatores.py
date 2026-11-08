@@ -5,16 +5,18 @@ O sinal é sempre orientado para que valor MAIOR = ação mais atrativa.
 """
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 
 def momentum(monthly_returns: pd.DataFrame, lookback: int = 12, skip: int = 1) -> pd.DataFrame:
     """Momentum 12-1: retorno acumulado de t-12 a t-1, pulando o último mês
     (o último mês tende a apresentar reversão de curto prazo)."""
-    gross = (1 + monthly_returns).fillna(1)
-    cum = gross.rolling(lookback - skip).apply(lambda x: x.prod(), raw=True) - 1
-    valid = monthly_returns.notna().rolling(lookback - skip).sum() == (lookback - skip)
-    return cum.where(valid).shift(skip)
+    n = lookback - skip
+    # soma de log-retornos = produto dos retornos brutos; exige os n meses completos
+    log_ret = np.log1p(monthly_returns)
+    cum = np.expm1(log_ret.rolling(n, min_periods=n).sum())
+    return cum.shift(skip)
 
 
 def low_volatility(adj_close: pd.DataFrame, window: int = 252) -> pd.DataFrame:

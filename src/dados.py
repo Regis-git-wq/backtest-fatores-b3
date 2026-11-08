@@ -4,10 +4,9 @@ Tudo fica em cache na pasta data/ para não baixar de novo a cada execução.
 """
 from __future__ import annotations
 
+import json
 import os
-from datetime import datetime
 
-import numpy as np
 import pandas as pd
 import requests
 
@@ -20,6 +19,21 @@ def _cache(path: str) -> pd.DataFrame | None:
     return None
 
 
+def _cache_valid(name: str, key: dict) -> bool:
+    """O cache só vale se foi gerado com os mesmos parâmetros (tickers, datas).
+    Assim, mudar o config.py força um novo download."""
+    path = f"{DATA_DIR}/{name}_meta.json"
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        return json.load(f) == key
+
+
+def _save_meta(name: str, key: dict):
+    with open(f"{DATA_DIR}/{name}_meta.json", "w") as f:
+        json.dump(key, f)
+
+
 def download_prices(tickers: list[str], start: str, end: str, benchmark: str) -> dict[str, pd.DataFrame]:
     """Baixa preços diários. Retorna dict com:
     - 'adj_close': fechamento ajustado por proventos e desdobramentos (base dos retornos)
@@ -30,7 +44,8 @@ def download_prices(tickers: list[str], start: str, end: str, benchmark: str) ->
     """
     os.makedirs(DATA_DIR, exist_ok=True)
     paths = {k: f"{DATA_DIR}/{k}.csv" for k in ["adj_close", "close", "volume", "benchmark"]}
-    if all(os.path.exists(p) for p in paths.values()):
+    key = {"tickers": sorted(tickers), "start": start, "end": end, "benchmark": benchmark}
+    if _cache_valid("precos", key) and all(os.path.exists(p) for p in paths.values()):
         return {k: _cache(p) for k, p in paths.items()}
 
     import yfinance as yf
@@ -60,6 +75,7 @@ def download_prices(tickers: list[str], start: str, end: str, benchmark: str) ->
 
     for k, df in out.items():
         df.to_csv(paths[k])
+    _save_meta("precos", key)
     return out
 
 
@@ -67,9 +83,9 @@ def download_cdi(start: str, end: str) -> pd.Series:
     """CDI diário (série SGS 12 do BCB, em % ao dia). A API limita consultas a 10 anos,
     então a busca é feita em blocos. Retorna a taxa diária em decimal."""
     path = f"{DATA_DIR}/cdi.csv"
-    cached = _cache(path)
-    if cached is not None:
-        return cached.iloc[:, 0]
+    key = {"start": start, "end": end}
+    if _cache_valid("cdi", key):
+        return _cache(path).iloc[:, 0]
 
     start_d, end_d = pd.Timestamp(start), pd.Timestamp(end)
     frames = []
@@ -89,6 +105,7 @@ def download_cdi(start: str, end: str) -> pd.Series:
     cdi = cdi[~cdi.index.duplicated()]
     os.makedirs(DATA_DIR, exist_ok=True)
     cdi.to_frame().to_csv(path)
+    _save_meta("cdi", key)
     return cdi
 
 

@@ -15,9 +15,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import config as cfg
-from src import dados, fatores, carteiras, metricas, excel
+from src import dados, fatores, carteiras, metricas
 
 RESULTS = "results"
+MARKET = "Universo EW"  # carteira igualmente ponderada de todas as ações elegíveis
 
 
 def load_data(synthetic: bool):
@@ -50,6 +51,7 @@ def plot_drawdown(rets: pd.DataFrame, title: str, path: str):
     fig, ax = plt.subplots(figsize=(10, 4))
     dd.plot(ax=ax, lw=1.2)
     ax.set_title(title)
+    ax.set_xlabel("")
     ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -71,6 +73,13 @@ def main(synthetic: bool = False):
 
     elig = fatores.eligibility(adj, close, vol, cfg.MIN_HISTORY_DAYS,
                                cfg.MIN_MEDIAN_VOLUME_BRL, cfg.MIN_PRICE_BRL)
+
+    # Benchmark principal: todas as ações elegíveis com pesos iguais, com dividendos e custos.
+    # É a comparação justa com as carteiras (mesmo universo, mesmos ajustes). O Ibovespa
+    # do Yahoo é índice de preço (sem dividendos) e fica só como referência.
+    market, _ = carteiras.portfolio_returns(carteiras.weights_from_mask(elig), monthly,
+                                            cfg.TRANSACTION_COST_BPS)
+
     sig_mom = fatores.momentum(monthly, cfg.MOM_LOOKBACK, cfg.MOM_SKIP)
     sig_vol = fatores.low_volatility(adj, cfg.VOL_WINDOW_DAYS).reindex_like(sig_mom)
     signals = {
@@ -80,13 +89,15 @@ def main(synthetic: bool = False):
     }
 
     nefin = dados.load_nefin(cfg.NEFIN_FILE)
-    all_summaries, all_alphas, all_rets = [], [], {}
+    mkt_excess = (market - rf).rename("Mercado").to_frame()
+    all_summaries, all_alphas = [], []
     top = f"G{cfg.N_GROUPS}"
 
     for name, sig in signals.items():
         bt = carteiras.sort_backtest(sig, elig, monthly, cfg.N_GROUPS, cfg.TRANSACTION_COST_BPS)
         rets = bt["returns"]
-        rets["Ibovespa"] = ibov.reindex(rets.index)
+        rets[MARKET] = market.reindex(rets.index)
+        rets["Ibovespa (sem dividendos)"] = ibov.reindex(rets.index)
         rets["CDI"] = rf.reindex(rets.index)
         rets = rets.dropna()
 
@@ -95,55 +106,39 @@ def main(synthetic: bool = False):
         summ.insert(0, "Estratégia", name)
         all_summaries.append(summ)
         rets.to_csv(f"{RESULTS}/retornos_{name}.csv")
-        all_rets[name] = rets
 
-        # Alfa da carteira vencedora e da long-short: CAPM (Ibovespa) e, se houver, NEFIN
-        mkt = (ibov - rf).rename("Mercado")
+        # Alfa do melhor grupo (em excesso ao CDI) e da long-short (autofinanciada)
         for port in [top, "Long-Short"]:
             use_rf = rf if port == top else None
-            a = metricas.alpha_regression(rets[port], mkt.to_frame(), use_rf, cfg.NEWEY_WEST_LAGS)
-            a.insert(0, "modelo", "CAPM"); a.insert(0, "carteira", port); a.insert(0, "estrategia", name)
-            all_alphas.append(a)
+            models = [("CAPM", mkt_excess)]
             if nefin is not None:
-                a = metricas.alpha_regression(rets[port], nefin[["Rm_minus_Rf", "SMB", "HML", "WML", "IML"]],
-                                              use_rf, cfg.NEWEY_WEST_LAGS)
-                a.insert(0, "modelo", "NEFIN 5F"); a.insert(0, "carteira", port); a.insert(0, "estrategia", name)
+                models.append(("NEFIN 5F", nefin[["Rm_minus_Rf", "SMB", "HML", "WML", "IML"]]))
+            for model_name, factors in models:
+                a = metricas.alpha_regression(rets[port], factors, use_rf, cfg.NEWEY_WEST_LAGS)
+                a.insert(0, "modelo", model_name)
+                a.insert(0, "carteira", port)
+                a.insert(0, "estrategia", name)
                 all_alphas.append(a)
 
-        plot_cumulative(rets[[top, "G1", "Ibovespa", "CDI"]],
-                        f"{name}: carteiras extremas vs Ibovespa e CDI",
+        plot_cumulative(rets[[top, "G1", MARKET, "CDI"]],
+                        f"{name}: carteiras extremas vs universo e CDI",
                         f"{RESULTS}/acumulado_{name}.png")
-        plot_drawdown(rets[[top, "Ibovespa"]], f"{name}: drawdown", f"{RESULTS}/drawdown_{name}.png")
+        plot_drawdown(rets[[top, MARKET]], f"{name}: drawdown", f"{RESULTS}/drawdown_{name}.png")
 
     summary = pd.concat(all_summaries)
     alphas = pd.concat(all_alphas)
     summary.to_csv(f"{RESULTS}/metricas.csv")
     alphas.to_csv(f"{RESULTS}/regressoes_alfa.csv")
 
-    params = {
-        "Fonte dos dados": "Simulados (teste)" if synthetic else "Yahoo Finance (preços) e Banco Central (CDI)",
-        "Período dos dados": f"{cfg.START_DATE} a {cfg.END_DATE}",
-        "Ações no universo": ", ".join(adj.columns),
-        "Benchmark": "Ibovespa",
-        "Histórico mínimo (pregões)": cfg.MIN_HISTORY_DAYS,
-        "Volume financeiro mediano mínimo (R$/dia)": cfg.MIN_MEDIAN_VOLUME_BRL,
-        "Preço mínimo (R$)": cfg.MIN_PRICE_BRL,
-        "Número de grupos": cfg.N_GROUPS,
-        "Custo de transação (bps por lado)": cfg.TRANSACTION_COST_BPS,
-        "Momentum": f"{cfg.MOM_LOOKBACK}-{cfg.MOM_SKIP}",
-        "Janela da volatilidade (pregões)": cfg.VOL_WINDOW_DAYS,
-        "Defasagens Newey-West": cfg.NEWEY_WEST_LAGS,
-        "Fatores NEFIN": "Sim" if nefin is not None else "Não (só CAPM)",
-    }
-    excel.export_excel(f"{RESULTS}/resultados_backtest.xlsx", summary, alphas, all_rets, params, cfg.N_GROUPS)
-
     pd.set_option("display.width", 200)
+    pd.set_option("display.max_columns", 20)
     pd.set_option("display.float_format", lambda x: f"{x:,.3f}")
     print("\n=== Métricas (líquidas de custos) ===")
     print(summary)
     print("\n=== Alfas (erros Newey-West) ===")
-    print(alphas.loc[["const", "alfa a.a."]] if "const" in alphas.index else alphas)
-    print(f"\nPeríodo: {rets.index.min():%m/%Y} a {rets.index.max():%m/%Y}. Resultados em ./{RESULTS}/")
+    print(alphas.loc[["const", "alfa a.a."]])
+    print(f"\nAções no universo: {adj.shape[1]}. "
+          f"Período: {rets.index.min():%m/%Y} a {rets.index.max():%m/%Y}. Resultados em ./{RESULTS}/")
 
 
 if __name__ == "__main__":

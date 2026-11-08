@@ -23,9 +23,14 @@ def assign_groups(signal: pd.DataFrame, eligible: pd.DataFrame, n_groups: int) -
     return sig.apply(_rank, axis=1)
 
 
-def weights_from_groups(groups: pd.DataFrame, group: int) -> pd.DataFrame:
-    members = (groups == group).astype(float)
+def weights_from_mask(mask: pd.DataFrame) -> pd.DataFrame:
+    """Pesos iguais para as ações marcadas como True em cada data."""
+    members = mask.astype(float)
     return members.div(members.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
+
+
+def weights_from_groups(groups: pd.DataFrame, group: int) -> pd.DataFrame:
+    return weights_from_mask(groups == group)
 
 
 def portfolio_returns(weights: pd.DataFrame, monthly_returns: pd.DataFrame,
@@ -37,7 +42,7 @@ def portfolio_returns(weights: pd.DataFrame, monthly_returns: pd.DataFrame,
     """
     w = weights.shift(1)  # peso decidido em t vale para o retorno de t+1
     r = monthly_returns.reindex_like(w)
-    # ação que some no mês (sem retorno) é tratada como retorno zero, com aviso no README
+    # ação sem retorno no mês (ex.: deixou de negociar) é tratada como retorno zero (ver README)
     gross = (w * r.fillna(0)).sum(axis=1)
 
     drifted = (w * (1 + r.fillna(0)))

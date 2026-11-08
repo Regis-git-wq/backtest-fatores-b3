@@ -13,12 +13,15 @@ TICKERS = [
     "GGBR4", "GOAU4", "CSNA3", "USIM5", "CMIG4", "SBSP3", "KLBN11", "TOTS3",
     "VIVT3", "TIMS3", "CSAN3", "UGPA3", "HYPE3", "MULT3", "CYRE3", "MRVE3",
     "EZTC3", "BRAP4", "CPFE3", "ENGI11", "TAEE11", "EGIE3", "SANB11", "BBSE3",
-    "PSSA3", "MGLU3", "RAIL3", "SLCE3", "SMTO3", "FLRY3", "ODPV3", "ALPA4",
+    "PSSA3", "MGLU3", "RAIL3", "SLCE3", "SMTO3", "FLRY3", "ALPA4",
     "YDUQ3", "COGN3", "MDIA3", "GRND3", "DXCO3", "BEEF3", "ENEV3", "ALOS3",
-    "PCAR3", "CVCB3", "POSI3", "STBP3", "ECOR3", "SAPR11", "TRPL4", "LIGT3",
+    "PCAR3", "CVCB3", "POSI3", "ECOR3", "SAPR11", "LIGT3",
 ]
+# Removidas por não terem dados no Yahoo Finance: ODPV3, STBP3, TRPL4.
 
-BENCHMARK = "^BVSP"  # Ibovespa
+# Ibovespa do Yahoo: índice de PREÇO (sem dividendos). Usado só como referência;
+# o benchmark principal é a carteira igualmente ponderada do próprio universo.
+BENCHMARK = "^BVSP"
 
 # Filtros de elegibilidade (aplicados no fim de cada mês de formação)
 MIN_HISTORY_DAYS = 252          # pelo menos 1 ano de preços
