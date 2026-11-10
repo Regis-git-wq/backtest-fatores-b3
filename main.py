@@ -12,7 +12,7 @@ import os
 import pandas as pd
 
 import config as cfg
-from src import dados, fatores, carteiras, metricas, graficos
+from src import dados, fatores, carteiras, metricas, graficos, robustez
 
 RESULTS = "results"
 MARKET = "Universo EW"  # carteira igualmente ponderada de todas as ações elegíveis
@@ -43,8 +43,9 @@ def main(synthetic: bool = False):
     ibov = dados.to_monthly_returns(px["benchmark"])["IBOV"]
     rf = dados.cdi_monthly(cdi_daily)
 
+    suspicious = dados.flag_suspicious_returns(adj)
     if not synthetic:
-        save_csv(dados.flag_suspicious_returns(adj), f"{RESULTS}/retornos_suspeitos.csv", index=False)
+        save_csv(suspicious, f"{RESULTS}/retornos_suspeitos.csv", index=False)
 
     elig = fatores.eligibility(adj, close, vol, cfg.MIN_HISTORY_DAYS,
                                cfg.MIN_MEDIAN_VOLUME_BRL, cfg.MIN_PRICE_BRL)
@@ -104,6 +105,22 @@ def main(synthetic: bool = False):
     alphas = pd.concat(all_alphas)
     save_csv(summary, f"{RESULTS}/metricas.csv", index_label="Carteira")
     save_csv(alphas, f"{RESULTS}/regressoes_alfa.csv", index_label="Termo")
+    # --- Robustez ---
+    sub = robustez.por_subperiodo(all_rets, cfg.SUBPERIODS, top, MARKET)
+    reg = robustez.por_regime(all_rets, robustez.regime_selic(cdi_daily), top, MARKET)
+    base = {"grupos": cfg.N_GROUPS, "custo_bps": cfg.TRANSACTION_COST_BPS}
+    specs = [{"nome": f"Base (tercis, {cfg.TRANSACTION_COST_BPS} bps)", **base}]
+    specs += [{"nome": f"Custo de {c} bps", **base, "custo_bps": c} for c in cfg.COST_GRID_BPS]
+    specs += [{"nome": f"{cfg.ALT_N_GROUPS} grupos", **base, "grupos": cfg.ALT_N_GROUPS}]
+    flagged = sorted(suspicious["ticker"].unique())
+    if flagged:
+        specs += [{"nome": f"Sem ações com retornos suspeitos ({len(flagged)})", **base, "excluir": flagged}]
+    esp = robustez.por_especificacao(signals, elig, monthly, specs)
+    save_csv(sub, f"{RESULTS}/robustez_subperiodos.csv", index=False)
+    save_csv(reg, f"{RESULTS}/robustez_ciclos_selic.csv", index=False)
+    save_csv(esp, f"{RESULTS}/robustez_especificacoes.csv", index=False)
+    graficos.robustez_plot(sub, reg, esp, f"{RESULTS}/robustez.png")
+
     graficos.hero(all_rets, top, MARKET, f"{RESULTS}/destaque.png")
     graficos.alpha_plot(alphas, top, f"{RESULTS}/alfas.png")
 
@@ -114,6 +131,10 @@ def main(synthetic: bool = False):
     print(summary)
     print("\n=== Alfas (erros Newey-West) ===")
     print(alphas.loc[["const", "alfa a.a."]])
+    for title, tab in [("Robustez: subperíodos", sub), ("Robustez: ciclos da Selic", reg),
+                       ("Robustez: especificações", esp)]:
+        print(f"\n=== {title} ===")
+        print(tab.to_string(index=False))
     print(f"\nAções no universo: {adj.shape[1]}. "
           f"Período: {rets.index.min():%m/%Y} a {rets.index.max():%m/%Y}. Resultados em ./{RESULTS}/")
 

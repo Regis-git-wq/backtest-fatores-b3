@@ -42,3 +42,8 @@ NEWEY_WEST_LAGS = 6
 
 # Arquivo opcional com fatores do NEFIN-USP (ver README)
 NEFIN_FILE = "data/nefin_factors.csv"
+
+# Análises de robustez
+SUBPERIODS = [("2011", "2015"), ("2016", "2020"), ("2021", "2025")]
+COST_GRID_BPS = [0, 25, 50]      # além do custo-base acima
+ALT_N_GROUPS = 5                 # quintis, como alternativa aos tercis

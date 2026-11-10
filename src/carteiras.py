@@ -62,5 +62,9 @@ def sort_backtest(signal: pd.DataFrame, eligible: pd.DataFrame, monthly_returns:
         w = weights_from_groups(groups, g)
         rets[f"G{g}"], turns[f"G{g}"] = portfolio_returns(w, monthly_returns, cost_bps)
     rets = pd.DataFrame(rets)
-    rets["Long-Short"] = rets[f"G{n_groups}"] - rets["G1"]
+    # Long-short: a ponta vendida também PAGA custos. Subtrair o retorno líquido de G1
+    # devolveria esse custo, então a ponta vendida usa o retorno bruto e o custo é descontado.
+    gross_bottom, _ = portfolio_returns(weights_from_groups(groups, 1), monthly_returns, 0.0)
+    cost_bottom = gross_bottom - rets["G1"]
+    rets["Long-Short"] = rets[f"G{n_groups}"] - gross_bottom - cost_bottom
     return {"returns": rets, "turnover": pd.DataFrame(turns), "groups": groups}

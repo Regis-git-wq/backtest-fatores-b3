@@ -67,11 +67,12 @@ Signals use only information available at the end of month *t*; portfolios are h
 <summary><b>🧪 Validation: how I know the code doesn't "see the future"</b></summary>
 <br>
 
-`tests/test_pipeline.py` runs three checks on a simulated market:
+`tests/test_pipeline.py` runs four checks on a simulated market:
 
 1. **Random signal:** the long-short return is not significant (t ≈ 0).
 2. **Signal that peeks at next month:** returns are absurdly high, confirming the time alignment: the code only makes "free money" when it is given future information.
 3. **No look-ahead:** a date's signals don't change when all later data is deleted.
+4. **Costs:** higher transaction costs reduce the long-short return, since both legs pay costs.
 
 The simulated market embeds a known momentum effect, and the backtest recovers it (t ≈ 2.2). Tests run automatically on GitHub Actions on every code change.
 
@@ -96,8 +97,8 @@ The simulated market embeds a known momentum effect, and the backtest recovers i
 
 - [ ] **Value** and **quality** factors from CVM financial statements
 - [ ] Historical Ibovespa constituents, to remove survivorship bias
-- [ ] Robustness: subperiods, value weighting, quintiles, costs from 0 to 50 bps
-- [ ] Performance across Selic (policy rate) hiking and easing cycles
+- [x] Robustness: subperiods, Selic (policy rate) cycles, quintiles, costs from 0 to 50 bps (`robustez_*.csv` tables)
+- [ ] Value weighting
 
 ## References
 

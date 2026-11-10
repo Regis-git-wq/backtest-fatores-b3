@@ -78,11 +78,12 @@ O sinal usa apenas informação disponível até o fim do mês *t*, e a carteira
 <summary><b>🧪 Validação: como sei que o código não "vê o futuro"</b></summary>
 <br>
 
-`tests/test_pipeline.py` roda três testes num mercado simulado:
+`tests/test_pipeline.py` roda quatro testes num mercado simulado:
 
 1. **Sinal aleatório:** a long-short não tem retorno significativo (t ≈ 0).
 2. **Sinal que espia o mês seguinte:** o retorno sai absurdo. Isso confirma o alinhamento temporal, porque o código só ganha "de graça" quando recebe informação do futuro.
 3. **Sem look-ahead:** os sinais de uma data não mudam quando os dados posteriores são apagados.
+4. **Custos:** aumentar o custo de transação reduz o retorno da long-short, porque as duas pontas pagam custos.
 
 O mercado simulado embute um efeito de momentum conhecido, e o backtest o recupera (t ≈ 2,2). Os testes rodam automaticamente no GitHub Actions a cada alteração do código.
 
@@ -107,6 +108,7 @@ src/fatores.py         sinais e filtro de elegibilidade
 src/carteiras.py       formação das carteiras, retornos, giro e custos
 src/metricas.py        métricas de desempenho e regressões
 src/graficos.py        gráficos
+src/robustez.py        subperíodos, ciclos da Selic, custos e especificações alternativas
 tests/                 mercado simulado e testes de sanidade
 rodar_no_colab.ipynb   roda o projeto no Google Colab
 resultados/            saídas da última execução (CSV e PNG)
@@ -125,8 +127,8 @@ resultados/            saídas da última execução (CSV e PNG)
 
 - [ ] Fatores de **valor** e **qualidade** com demonstrações financeiras da CVM
 - [ ] Universo pela composição histórica do Ibovespa, para eliminar o viés de sobrevivência
-- [ ] Robustez: subperíodos, ponderação por valor de mercado, quintis, custos de 0 a 50 bps
-- [ ] Desempenho em ciclos de alta e queda da Selic
+- [x] Robustez: subperíodos, ciclos da Selic, quintis, custos de 0 a 50 bps (tabelas `robustez_*.csv`)
+- [ ] Ponderação por valor de mercado
 
 ## Referências
 

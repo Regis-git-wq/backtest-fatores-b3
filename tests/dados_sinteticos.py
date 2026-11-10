@@ -37,5 +37,7 @@ def gerar(n_stocks: int = 60, start: str = "2010-01-01", end: str = "2025-12-31"
         adj.iloc[: rng.integers(300, 2000), i] = np.nan
     volume = pd.DataFrame(rng.uniform(2e5, 3e6, adj.shape), index=days, columns=tickers).where(adj.notna())
     bench = pd.DataFrame({"IBOV": 50000 * np.exp(np.cumsum(mkt))}, index=days)
-    cdi = pd.Series(0.10 / 252, index=days, name="CDI")
+    # CDI com ciclos de alta e queda (entre 6% e 14% a.a.), para exercitar a análise por regime
+    annual = 0.10 + 0.04 * np.sin(np.arange(n) / 252 * 2 * np.pi / 5)
+    cdi = pd.Series((1 + annual) ** (1 / 252) - 1, index=days, name="CDI")
     return {"adj_close": adj, "close": adj, "volume": volume, "benchmark": bench}, cdi

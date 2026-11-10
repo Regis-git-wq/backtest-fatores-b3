@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 
@@ -167,5 +168,46 @@ def drawdown(rets: pd.DataFrame, name: str, top: str, market: str, path: str):
     ax.set_title(f"{STRATEGY_LABEL.get(name, name)}: queda em relação ao pico (drawdown)", pad=12)
     ax.legend(loc="lower left", ncol=2)
     fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def robustez_plot(sub: pd.DataFrame, reg: pd.DataFrame, esp: pd.DataFrame, path: str):
+    """Prêmio long-short anualizado em cada recorte: subperíodos, ciclos da Selic e especificações.
+    Barras cheias = significativo a 5%; barras claras = não significativo."""
+    panels = [(sub, "Período", "Por subperíodo"), (reg, "Ciclo da Selic", "Por ciclo da Selic"),
+              (esp, "Especificação", "Por especificação")]
+    strategies = list(dict.fromkeys(sub["Estratégia"]))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5.2), sharex=True,
+                             gridspec_kw={"width_ratios": [1, 1, 1.25]})
+    h = 0.8 / len(strategies)
+    for ax, (df, key, title) in zip(axes, panels):
+        cats = list(dict.fromkeys(df[key]))
+        for i, strat in enumerate(strategies):
+            d = df[df["Estratégia"] == strat].set_index(key).reindex(cats)
+            y = np.arange(len(cats)) + (i - (len(strategies) - 1) / 2) * h
+            v = d["Prêmio long-short a.a."].fillna(0).to_numpy()
+            sig = (d["t (long-short)"].abs() > 1.96).to_numpy()
+            color = STRATEGY_COLOR.get(strat, BLUE)
+            ax.barh(y, v, height=h * 0.86, color=color, alpha=1.0, label=STRATEGY_LABEL.get(strat, strat))
+            for patch, s in zip(ax.patches[-len(cats):], sig):
+                patch.set_alpha(1.0 if s else 0.35)
+        ax.set_axisbelow(True)
+        ax.axvline(0, color=INK_2, lw=1)
+        short = [c.split(" (")[0] if len(c) > 26 else c for c in cats]
+        ax.set_yticks(range(len(cats)), short, color=INK)
+        ax.invert_yaxis()
+        ax.grid(axis="y", visible=False)
+        ax.spines["left"].set_visible(False)
+        ax.tick_params(axis="y", length=0)
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:.0%}"))
+        ax.set_title(title, fontsize=12, pad=8)
+    handles = [Patch(color=STRATEGY_COLOR.get(s, BLUE), label=STRATEGY_LABEL.get(s, s)) for s in strategies]
+    fig.legend(handles=handles, loc="lower center", ncol=len(strategies), bbox_to_anchor=(0.5, -0.01))
+    fig.suptitle("Robustez: prêmio long-short anualizado em cada recorte", x=0.012, ha="left",
+                 fontsize=14, fontweight="bold", color=INK)
+    fig.text(0.012, 0.9, "Barra cheia = significativo a 5%; barra clara = não significativo",
+             color=INK_2, fontsize=10)
+    fig.tight_layout(rect=(0, 0.06, 1, 0.9))
     fig.savefig(path, dpi=150)
     plt.close(fig)

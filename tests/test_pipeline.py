@@ -5,6 +5,7 @@
    Se isso acontece, o alinhamento temporal está certo: o sinal de t só ganha
    dinheiro quando enxerga t+1, ou seja, o código não vaza o futuro por conta própria.
 3. O sinal de momentum de t não muda se apagarmos os dados posteriores a t (sem look-ahead).
+4. Custos maiores reduzem o retorno da long-short (as duas pontas pagam custos).
 """
 import numpy as np
 import pandas as pd
@@ -39,6 +40,12 @@ def main():
     vol_trunc = fatores.low_volatility(adj.loc[:cut]).loc[cut]
     assert np.allclose(vol_full.dropna(), vol_trunc.dropna())
     print("3) sinais em t idênticos com e sem dados futuros: OK")
+
+    mom = fatores.momentum(monthly)
+    ls0 = carteiras.sort_backtest(mom, elig, monthly, 3, 0)["returns"]["Long-Short"].mean()
+    ls50 = carteiras.sort_backtest(mom, elig, monthly, 3, 50)["returns"]["Long-Short"].mean()
+    print(f"4) long-short com custo 0: {ls0:.4f}/mês; com 50 bps: {ls50:.4f}/mês (deve cair)")
+    assert ls50 < ls0 - 0.0005
     print("Todos os testes passaram.")
 
 
