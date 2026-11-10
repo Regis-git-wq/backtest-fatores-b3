@@ -15,7 +15,7 @@
 
 ---
 
-Estratégias de **momentum** e **baixa volatilidade**, documentadas na literatura internacional, funcionam na B3? Este projeto responde com um backtest de 15 anos, líquido de custos de transação, com testes de significância e regressões de alfa.
+Estratégias de **momentum** e **baixa volatilidade**, documentadas na literatura internacional, funcionam na B3? Este projeto responde com um backtest de 15 anos, líquido de custos de transação, com testes de significância, regressões de alfa e análises de robustez.
 
 <p align="center">
   <img src="resultados/destaque.png" alt="Patrimônio acumulado do melhor tercil de cada estratégia contra o universo e o CDI" width="100%">
@@ -23,23 +23,40 @@ Estratégias de **momentum** e **baixa volatilidade**, documentadas na literatur
 
 ## Principais resultados
 
-| | Momentum | Baixa volatilidade | Universo (pesos iguais) | CDI |
-|---|:---:|:---:|:---:|:---:|
-| **Retorno a.a.** | **16,7%** | 14,8% | 11,9% | 9,7% |
-| **Volatilidade a.a.** | 21,0% | **16,9%** | 22,0% | — |
-| **Sharpe** | **0,41** | 0,36 | 0,20 | — |
-| **Drawdown máximo** | −41,3% | **−30,7%** | −36,5% | — |
-| **Alfa a.a. (CAPM)** | **+4,9%** \* | +3,0% | — | — |
+| | Momentum | Baixa volatilidade | Combinado | Universo (pesos iguais) | CDI |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Retorno a.a.** | **16,4%** | 14,7% | 16,3% | 11,9% | 9,7% |
+| **Volatilidade a.a.** | 21,0% | **16,9%** | 18,0% | 22,0% | — |
+| **Sharpe** | 0,40 | 0,35 | **0,42** | 0,20 | — |
+| **Drawdown máximo** | −41,3% | **−30,7%** | −32,1% | −36,5% | — |
+| **Alfa a.a. (CAPM)** | +4,7% \* | +2,9% | +4,4% \* | — | — |
 
 <sub>Melhor tercil de cada estratégia, fev/2011–dez/2025, rebalanceamento mensal, líquido de custos. \* significativo a 5%.</sub>
 
-- 📈 **Momentum gera alfa.** O melhor tercil supera o mercado em 4,9% a.a. ajustado ao risco (t = 2,08). A carteira long-short, que compra o melhor tercil e vende o pior, chega a 11,9% a.a. (t = 2,55).
-- 🛡️ **Baixa volatilidade entrega retorno de mercado com menos risco.** Tem a menor volatilidade e o menor drawdown entre todas as carteiras, com alfa no limite da significância (t = 1,64).
-- ⚖️ **As carteiras long-short têm beta negativo** (−0,37 no momentum e −0,73 na baixa volatilidade): as ações perdedoras e as mais voláteis são mais sensíveis ao mercado.
+- 📈 **Momentum e a estratégia combinada geram alfa no período completo.** O melhor tercil de momentum supera o mercado em 4,7% a.a. ajustado ao risco (t = 2,04), e o combinado em 4,4% a.a. (t = 2,37).
+- 🛡️ **Baixa volatilidade entrega mais retorno que o universo com menos risco:** a menor volatilidade e o menor drawdown entre as carteiras. O alfa de 2,9% a.a. não é significativo (t = 1,61).
+- ⚠️ **O ganho vem do ajuste ao risco, não do retorno bruto.** O excesso de retorno simples sobre o universo (3,9% a.a. no momentum) não é significativo (t = 1,50). O alfa aparece porque as carteiras têm beta menor que 1.
+- ⚖️ **As carteiras long-short têm beta negativo** (−0,37 no momentum e −0,74 na baixa volatilidade). O prêmio bruto do momentum é de 8,5% a.a. (t = 1,63), e o alfa de CAPM é de 10,7% a.a. (t = 2,30).
 
 <p align="center">
   <img src="resultados/alfas.png" alt="Alfa anual com intervalo de confiança de 95%" width="100%">
 </p>
+
+## Robustez: o resultado se sustenta?
+
+Em parte. Os testes abaixo mostram onde o resultado é frágil.
+
+<p align="center">
+  <img src="resultados/robustez.png" alt="Prêmio long-short por subperíodo, ciclo da Selic e especificação" width="100%">
+</p>
+
+- **Concentrado em 2011–2015.** Nesse período o prêmio long-short foi de 27% a.a. no momentum (t = 3,52) e 23% na baixa volatilidade (t = 2,63). De 2016 em diante, o momentum fica perto de zero, e a baixa volatilidade perdeu 26% a.a. em 2016–2020 (t = −2,22).
+- **Melhor em ciclos de alta da Selic.** Nos meses de juros em alta, o melhor tercil de baixa volatilidade superou o universo em 10,8% a.a. (t = 2,88). Com juros estáveis ou em queda, nenhum excesso é significativo.
+- **Sensível a custos.** O excesso do momentum sobre o universo cai de 4,3% a.a. sem custos para 2,4% com 50 bps por lado.
+- **Sensível a poucas ações.** Sem as 5 ações com retornos suspeitos nos dados do Yahoo, o prêmio long-short do momentum cai de 8,5% para 6,1% a.a.
+- **Quintis** dão prêmios parecidos ou maiores (11,7% a.a. no momentum), também sem significância estatística.
+
+Tabelas: [`robustez_subperiodos.csv`](resultados/robustez_subperiodos.csv), [`robustez_ciclos_selic.csv`](resultados/robustez_ciclos_selic.csv) e [`robustez_especificacoes.csv`](resultados/robustez_especificacoes.csv).
 
 <details>
 <summary><b>📊 Gráficos por estratégia</b></summary>
@@ -119,7 +136,7 @@ resultados/            saídas da última execução (CSV e PNG)
 ## Limitações
 
 - **Viés de sobrevivência:** o universo usa empresas listadas hoje, o que infla os retornos absolutos. O efeito é menor nas comparações entre tercis e contra o universo, que compartilham o mesmo viés.
-- **Dados do Yahoo Finance:** há 10 retornos diários acima de ±50% ([lista](resultados/retornos_suspeitos.csv)). Parte é evento real, como as cisões do GPA, e parte parece erro de ajuste.
+- **Dados do Yahoo Finance:** há 10 retornos diários acima de ±50%, em 5 ações ([lista](resultados/retornos_suspeitos.csv)). Parte é evento real, como as cisões do GPA, e parte parece erro de ajuste. A análise de robustez mostra o resultado sem essas ações.
 - **Universo pequeno:** com tercis de cerca de 20 ações, os resultados ficam sensíveis a poucas empresas.
 - **Custos simplificados:** o custo é fixo em bps, sem modelar o impacto de mercado.
 

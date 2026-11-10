@@ -15,7 +15,7 @@
 
 ---
 
-Do **momentum** and **low-volatility** strategies, well documented in international markets, work on B3 (Brazil's stock exchange)? This project answers with a 15-year backtest, net of transaction costs, with significance tests and alpha regressions.
+Do **momentum** and **low-volatility** strategies, well documented in international markets, work on B3 (Brazil's stock exchange)? This project answers with a 15-year backtest, net of transaction costs, with significance tests, alpha regressions and robustness checks.
 
 > Code comments and chart labels are in Portuguese. R$ = Brazilian real; CDI = Brazil's interbank rate, used as the risk-free rate.
 
@@ -25,25 +25,40 @@ Do **momentum** and **low-volatility** strategies, well documented in internatio
 
 ## Key results
 
-| | Momentum | Low volatility | Universe (equal-weighted) | CDI |
-|---|:---:|:---:|:---:|:---:|
-| **Annual return** | **16.7%** | 14.8% | 11.9% | 9.7% |
-| **Annual volatility** | 21.0% | **16.9%** | 22.0% | — |
-| **Sharpe ratio** | **0.41** | 0.36 | 0.20 | — |
-| **Max drawdown** | −41.3% | **−30.7%** | −36.5% | — |
-| **Annual alpha (CAPM)** | **+4.9%** \* | +3.0% | — | — |
+| | Momentum | Low volatility | Combined | Universe (equal-weighted) | CDI |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Annual return** | **16.4%** | 14.7% | 16.3% | 11.9% | 9.7% |
+| **Annual volatility** | 21.0% | **16.9%** | 18.0% | 22.0% | — |
+| **Sharpe ratio** | 0.40 | 0.35 | **0.42** | 0.20 | — |
+| **Max drawdown** | −41.3% | **−30.7%** | −32.1% | −36.5% | — |
+| **Annual alpha (CAPM)** | +4.7% \* | +2.9% | +4.4% \* | — | — |
 
 <sub>Top tercile of each strategy, Feb 2011–Dec 2025, monthly rebalancing, net of costs. \* significant at 5%.</sub>
 
-- 📈 **Momentum generates alpha.** The top tercile beats the market by 4.9% a year on a risk-adjusted basis (t = 2.08). The long-short portfolio (long the top tercile, short the bottom) earns 11.9% a year (t = 2.55).
-- 🛡️ **Low volatility delivers market-like returns with less risk.** It has the lowest volatility and the shallowest drawdown of all portfolios, with alpha at the edge of significance (t = 1.64).
-- ⚖️ **Long-short portfolios have negative market beta** (−0.37 for momentum, −0.73 for low volatility), because past losers and high-volatility stocks are more sensitive to the market.
+- 📈 **Momentum and the combined strategy generate alpha over the full period.** The momentum top tercile beats the market by 4.7% a year on a risk-adjusted basis (t = 2.04); the combined strategy by 4.4% (t = 2.37).
+- 🛡️ **Low volatility earns more than the universe with less risk:** the lowest volatility and shallowest drawdown of all portfolios. Its 2.9% alpha is not significant (t = 1.61).
+- ⚠️ **The gain comes from risk adjustment, not raw return.** The simple excess return over the universe (3.9% a year for momentum) is not significant (t = 1.50). Alpha shows up because the portfolios have betas below 1.
+- ⚖️ **Long-short portfolios have negative market beta** (−0.37 for momentum, −0.74 for low volatility). The raw momentum premium is 8.5% a year (t = 1.63); its CAPM alpha is 10.7% (t = 2.30).
 
 <p align="center">
   <img src="resultados/alfas.png" alt="Annual alpha with 95% confidence intervals" width="100%">
 </p>
 
-Full tables in [`resultados/`](resultados/) (semicolon-separated CSVs, decimal comma).
+## Robustness: does the result hold up?
+
+Partly. The tests below show where it is fragile.
+
+<p align="center">
+  <img src="resultados/robustez.png" alt="Long-short premium by subperiod, Selic cycle and specification" width="100%">
+</p>
+
+- **Concentrated in 2011–2015.** In that period the long-short premium was 27% a year for momentum (t = 3.52) and 23% for low volatility (t = 2.63). From 2016 on, momentum is close to zero, and low volatility lost 26% a year in 2016–2020 (t = −2.22).
+- **Stronger in Selic hiking cycles.** In months of rising policy rates, the low-volatility top tercile beat the universe by 10.8% a year (t = 2.88). With stable or falling rates, no excess return is significant.
+- **Sensitive to costs.** Momentum's excess over the universe falls from 4.3% a year with no costs to 2.4% at 50 bps per side.
+- **Sensitive to a few stocks.** Dropping the 5 stocks with suspicious returns in the Yahoo data cuts the momentum long-short premium from 8.5% to 6.1% a year.
+- **Quintiles** give similar or larger premiums (11.7% a year for momentum), also without statistical significance.
+
+Tables: [`robustez_subperiodos.csv`](resultados/robustez_subperiodos.csv), [`robustez_ciclos_selic.csv`](resultados/robustez_ciclos_selic.csv) and [`robustez_especificacoes.csv`](resultados/robustez_especificacoes.csv). Full tables in [`resultados/`](resultados/) (semicolon-separated CSVs, decimal comma).
 
 ## Methodology
 
@@ -89,7 +104,7 @@ The simulated market embeds a known momentum effect, and the backtest recovers i
 ## Limitations
 
 - **Survivorship bias:** the universe uses currently listed companies, which inflates absolute returns. The effect is smaller for comparisons between terciles and against the universe, which share the same bias.
-- **Yahoo Finance data:** 10 daily returns exceed ±50% ([list](resultados/retornos_suspeitos.csv)). Some are real corporate events (GPA spin-offs), others look like adjustment errors.
+- **Yahoo Finance data:** 10 daily returns exceed ±50%, across 5 stocks ([list](resultados/retornos_suspeitos.csv)). Some are real corporate events (GPA spin-offs), others look like adjustment errors. The robustness analysis shows results without those stocks.
 - **Small universe:** terciles of about 20 stocks make results sensitive to a few names.
 - **Simplified costs:** a flat bps cost, with no market-impact model.
 

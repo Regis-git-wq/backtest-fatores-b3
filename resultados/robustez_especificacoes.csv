@@ -1,0 +1,19 @@
+﻿Especificação;Estratégia;Prêmio long-short a.a.;t (long-short);Excesso sobre o universo a.a.;t (excesso);Meses
+Base (tercis, 10 bps);Momentum;0,0851;1,6288;0,0392;1,504;179
+Base (tercis, 10 bps);Baixa_Vol;0,0378;0,6314;0,015;0,5927;179
+Base (tercis, 10 bps);Combinado;0,0692;1,1541;0,031;1,1995;179
+Custo de 0 bps;Momentum;0,0948;1,8145;0,043;1,6491;179
+Custo de 0 bps;Baixa_Vol;0,0426;0,7117;0,0163;0,6435;179
+Custo de 0 bps;Combinado;0,0774;1,2911;0,0344;1,3305;179
+Custo de 25 bps;Momentum;0,0705;1,3501;0,0335;1,2861;179
+Custo de 25 bps;Baixa_Vol;0,0306;0,5108;0,0131;0,5164;179
+Custo de 25 bps;Combinado;0,0569;0,9486;0,026;1,003;179
+Custo de 50 bps;Momentum;0,0462;0,8854;0,024;0,9222;179
+Custo de 50 bps;Baixa_Vol;0,0186;0,3101;0,0099;0,3892;179
+Custo de 50 bps;Combinado;0,0364;0,6063;0,0175;0,6755;179
+5 grupos;Momentum;0,1171;1,7603;0,0547;1,6493;179
+5 grupos;Baixa_Vol;0,0348;0,4399;0,0118;0,3692;179
+5 grupos;Combinado;0,0836;1,1071;0,0478;1,4817;179
+Sem ações com retornos suspeitos (5);Momentum;0,0611;1,1355;0,0355;1,3377;179
+Sem ações com retornos suspeitos (5);Baixa_Vol;0,0205;0,3411;0,007;0,2791;179
+Sem ações com retornos suspeitos (5);Combinado;0,0458;0,759;0,0223;0,85;179
