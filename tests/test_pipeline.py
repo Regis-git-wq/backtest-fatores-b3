@@ -8,6 +8,8 @@
 4. Custos maiores reduzem o retorno da long-short (as duas pontas pagam custos).
 5. A limpeza de dados neutraliza um desdobramento não ajustado, remove um pico que
    reverte e não mexe em dados sem problema.
+6. O valor de mercado trata desdobramentos e units sem saltos implausíveis.
+7. Os fundamentos só entram no sinal depois da data de entrega à CVM.
 """
 import numpy as np
 import pandas as pd
@@ -65,6 +67,36 @@ def main():
     untouched, rep0 = dados.clean_prices(clean_ref)
     assert rep0.empty and np.allclose(untouched, clean_ref)
     print("5) limpeza: desdobramento neutralizado, pico removido, dados limpos intactos: OK")
+
+    # 6) Valor de mercado: desdobramento e unit tratados, sem saltos implausíveis
+    from src import fundamentos
+    from tests.dados_sinteticos import gerar_fundamentos
+    tmap, fund, shares, splits = gerar_fundamentos(px)
+    close_m = px["close"].resample("ME").last()
+    mcap = fundamentos.market_cap(close_m, splits, tmap, shares)
+    assert fundamentos.implausible_caps(mcap, close_m).empty
+    m = pd.Timestamp("2016-06-30")
+    assert np.isclose(mcap.loc[m, "ACAO10"], close_m.loc[m, "ACAO10"] / 5 * 1e9)
+    assert np.isclose(mcap.loc[pd.Timestamp("2017-06-30"), "ACAO05"],
+                      close_m.loc[pd.Timestamp("2017-06-30"), "ACAO05"] * 2 * 1e9)
+    for txt, n in [("1 KLBN3 + 4 KLBN4", 5), ("1 ON / 2 PN", 3), ("1 ENG3 e 4 ENGI4", 5),
+                   ("2 ações preferenciais e 1 ação ordinária", 3), ("1 PN + 3 Recibos de Subscrição", None)]:
+        assert fundamentos.parse_unit(txt) == n, txt
+    print("6) valor de mercado: desdobramento e unit corretos, sem saltos: OK")
+
+    # 7) Fundamentos sem look-ahead: o exercício de 2015 só aparece a partir de mar/2016
+    months = close_m.index
+    pit = fundamentos.point_in_time(fund, tmap, months)
+    t0, cnpj0 = tmap.iloc[0]["ticker"], tmap.iloc[0]["cnpj"]
+    pl = fund[fund.cnpj == cnpj0].set_index("exercicio")["pl_ctrl"]
+    assert np.isclose(pit["pl_ctrl"].loc[pd.Timestamp("2016-02-29"), t0], pl[pd.Timestamp("2014-12-31")])
+    assert np.isclose(pit["pl_ctrl"].loc[pd.Timestamp("2016-03-31"), t0], pl[pd.Timestamp("2015-12-31")])
+    cut = pd.Timestamp("2019-08-31")
+    pit_cut = fundamentos.point_in_time(fund[fund.disponivel_em <= cut], tmap, months[months <= cut])
+    sig_full = fundamentos.signals(pit, mcap, [])["Valor"].loc[:cut]
+    sig_cut = fundamentos.signals(pit_cut, mcap.loc[:cut], [])["Valor"]
+    assert np.allclose(sig_full.fillna(0), sig_cut.fillna(0))
+    print("7) fundamentos: só entram depois de entregues; sinais iguais sem dados futuros: OK")
     print("Todos os testes passaram.")
 
 

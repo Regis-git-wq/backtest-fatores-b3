@@ -80,6 +80,31 @@ def download_prices(tickers: list[str], start: str, end: str, benchmark: str) ->
     return out
 
 
+def download_splits(tickers: list[str]) -> dict[str, pd.Series]:
+    """Desdobramentos, grupamentos e bonificações do Yahoo (razão > 1 = desdobramento).
+    Necessários para desfazer o ajuste do preço de fechamento ao calcular o valor de mercado."""
+    path = f"{DATA_DIR}/splits.csv"
+    key = {"tickers": sorted(tickers)}
+    if _cache_valid("splits", key) and os.path.exists(path):
+        df = pd.read_csv(path, parse_dates=["data"])
+    else:
+        import yfinance as yf
+        rows = []
+        for t in tickers:
+            try:
+                sp = yf.Ticker(f"{t}.SA").splits
+            except Exception as e:  # um ticker com erro não derruba o resto
+                print(f"[aviso] splits de {t}: {e}")
+                continue
+            for d, r in sp.items():
+                rows.append({"ticker": t, "data": pd.Timestamp(d).tz_localize(None).normalize(), "razao": float(r)})
+        df = pd.DataFrame(rows, columns=["ticker", "data", "razao"])
+        os.makedirs(DATA_DIR, exist_ok=True)
+        df.to_csv(path, index=False)
+        _save_meta("splits", key)
+    return {t: g.set_index("data")["razao"] for t, g in df.groupby("ticker")}
+
+
 def download_cdi(start: str, end: str) -> pd.Series:
     """CDI diário (série SGS 12 do BCB, em % ao dia). A API limita consultas a 10 anos,
     então a busca é feita em blocos. Retorna a taxa diária em decimal."""

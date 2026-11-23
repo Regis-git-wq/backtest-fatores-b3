@@ -19,10 +19,13 @@ INK = "#0b0b0b"
 INK_2 = "#52514e"
 GRID = "#e6e5e1"
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
+YELLOW, MAGENTA, VIOLET = "#eda100", "#e87ba4", "#6250d6"
 BENCH, CDI_GRAY = "#52514e", "#a3a29c"
 
-STRATEGY_COLOR = {"Momentum": BLUE, "Baixa_Vol": ORANGE, "Combinado": AQUA}
-STRATEGY_LABEL = {"Momentum": "Momentum", "Baixa_Vol": "Baixa volatilidade", "Combinado": "Combinado"}
+STRATEGY_COLOR = {"Momentum": BLUE, "Baixa_Vol": ORANGE, "Combinado": AQUA,
+                  "Valor": YELLOW, "Qualidade": MAGENTA, "Multifator": VIOLET}
+STRATEGY_LABEL = {"Momentum": "Momentum", "Baixa_Vol": "Baixa volatilidade", "Combinado": "Combinado",
+                  "Valor": "Valor", "Qualidade": "Qualidade", "Multifator": "Multifator"}
 
 plt.rcParams.update({
     "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
@@ -63,20 +66,21 @@ def _end_labels(ax, wealth: pd.DataFrame, colors: dict, labels: dict):
 def hero(rets_by_strategy: dict[str, pd.DataFrame], top: str, market: str, path: str):
     """Gráfico de destaque: melhor grupo de cada estratégia vs universo e CDI."""
     any_r = next(iter(rets_by_strategy.values()))
-    series = {STRATEGY_LABEL[k]: v[top] for k, v in rets_by_strategy.items() if k != "Combinado"}
+    show = [k for k in ["Momentum", "Baixa_Vol", "Valor", "Qualidade"] if k in rets_by_strategy]
+    series = {STRATEGY_LABEL[k]: rets_by_strategy[k][top] for k in show}
     series["Universo (pesos iguais)"] = any_r[market]
     series["CDI"] = any_r["CDI"]
-    wealth = (1 + pd.DataFrame(series)).cumprod()
+    wealth = (1 + pd.DataFrame(series).dropna()).cumprod()  # período comum a todas as linhas
     wealth = pd.concat([pd.DataFrame(1.0, index=[wealth.index[0] - pd.offsets.MonthEnd(1)],
                                      columns=wealth.columns), wealth])
-    colors = {"Momentum": BLUE, "Baixa volatilidade": ORANGE,
-              "Universo (pesos iguais)": BENCH, "CDI": CDI_GRAY}
+    colors = {STRATEGY_LABEL[k]: STRATEGY_COLOR[k] for k in show}
+    colors.update({"Universo (pesos iguais)": BENCH, "CDI": CDI_GRAY})
     styles = {"Universo (pesos iguais)": "-", "CDI": "--"}
 
     fig, ax = plt.subplots(figsize=(11, 5.6))
     for c in wealth:
         ax.plot(wealth.index, wealth[c], color=colors[c], ls=styles.get(c, "-"),
-                lw=2.4 if c in ("Momentum", "Baixa volatilidade") else 1.8, label=c)
+                lw=2.4 if c not in ("Universo (pesos iguais)", "CDI") else 1.8, label=c)
     _log_wealth_axis(ax)
     _end_labels(ax, wealth, colors, {c: c for c in wealth})
     ax.set_xlim(wealth.index[0], wealth.index[-1] + pd.Timedelta(days=1400))
@@ -87,7 +91,7 @@ def hero(rets_by_strategy: dict[str, pd.DataFrame], top: str, market: str, path:
     ax.set_title("Quanto valeria R$ 1 investido em 2011", pad=26)
     _subtitle(ax, f"Melhor tercil de cada estratégia, rebalanceamento mensal, líquido de custos · "
                   f"{wealth.index[1]:%m/%Y}–{wealth.index[-1]:%m/%Y} · escala log")
-    ax.legend(loc="upper left", ncol=4, bbox_to_anchor=(0, 1.0))
+    ax.legend(loc="upper left", ncol=3, bbox_to_anchor=(0, 1.0))
     fig.tight_layout()
     fig.savefig(path, dpi=160)
     plt.close(fig)
@@ -105,7 +109,7 @@ def alpha_plot(alphas: pd.DataFrame, top: str, path: str):
 
     strategies = list(dict.fromkeys(df.estrategia))
     label_x = df.hi.max() + 0.015
-    fig, ax = plt.subplots(figsize=(11, 4.8))
+    fig, ax = plt.subplots(figsize=(11, 3.2 + 0.55 * len(strategies)))
     offsets = {top: -0.17, "Long-Short": 0.17}
     colors = {top: BLUE, "Long-Short": ORANGE}
     names = {top: "Melhor tercil", "Long-Short": "Long-short (melhor − pior)"}
@@ -178,7 +182,7 @@ def robustez_plot(sub: pd.DataFrame, reg: pd.DataFrame, esp: pd.DataFrame, path:
     panels = [(sub, "Período", "Por subperíodo"), (reg, "Ciclo da Selic", "Por ciclo da Selic"),
               (esp, "Especificação", "Por especificação")]
     strategies = list(dict.fromkeys(sub["Estratégia"]))
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5.2), sharex=True,
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5.2 + 0.5 * max(0, len(strategies) - 3)), sharex=True,
                              gridspec_kw={"width_ratios": [1, 1, 1.25]})
     h = 0.8 / len(strategies)
     for ax, (df, key, title) in zip(axes, panels):

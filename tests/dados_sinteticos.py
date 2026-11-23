@@ -46,3 +46,45 @@ def gerar(n_stocks: int = 60, start: str = "2010-01-01", end: str = "2025-12-31"
         adj.iloc[:2500, 1] *= 4
         adj.iloc[3000:3002, 2] *= 2.5
     return {"adj_close": adj, "close": adj, "volume": volume, "benchmark": bench}, cdi
+
+
+def gerar_fundamentos(px: dict, seed: int = 0):
+    """Fundamentos simulados no mesmo formato dos da CVM, para testar o pipeline.
+
+    Inclui os casos difíceis: um desdobramento 2:1 (ACAO05) e uma unit de 5 ações (ACAO10).
+    Cada exercício (31/dez) só fica disponível em 25/mar do ano seguinte.
+    """
+    rng = np.random.default_rng(seed)
+    close = px["close"]
+    tickers = list(close.columns)
+    tmap = pd.DataFrame({
+        "ticker": tickers,
+        "cnpj": [f"{i:02d}.000.000/0001-00" for i in range(len(tickers))],
+        "empresa": tickers,
+        "acoes_por_unit": [5 if t == "ACAO10" else 1 for t in tickers],
+        "inicio_negociacao": pd.NaT,
+    })
+    split_day = pd.Timestamp("2018-06-15")
+    shares = pd.DataFrame({"cnpj": tmap["cnpj"], "data": pd.Timestamp("2005-01-01"), "acoes": 1e9})
+    c5 = tmap.loc[tmap.ticker == "ACAO05", "cnpj"].iloc[0]
+    shares = pd.concat([shares, pd.DataFrame({"cnpj": [c5], "data": [split_day], "acoes": [2e9]})])
+    splits = {"ACAO05": pd.Series([2.0], index=[split_day])}
+
+    rows = []
+    year_end = close.resample("YE").last()
+    for _, r in tmap.iterrows():
+        for d, price in year_end[r["ticker"]].dropna().items():
+            if d.year >= 2025:
+                continue
+            per_share = price * (2.0 if (r["ticker"] == "ACAO05" and d < split_day) else 1.0)
+            n = 2e9 if (r["ticker"] == "ACAO05" and d >= split_day) else 1e9
+            mcap = per_share / r["acoes_por_unit"] * n
+            pl = mcap * rng.uniform(0.3, 1.5)
+            rows.append({"cnpj": r["cnpj"], "exercicio": d.normalize(),
+                         "disponivel_em": pd.Timestamp(f"{d.year + 1}-03-25"),
+                         "ativo": pl * rng.uniform(1.5, 4.0), "pl_total": pl, "minoritarios": 0.0,
+                         "pl_ctrl": pl, "lucro_total": pl * rng.normal(0.12, 0.08),
+                         "fonte": "consolidada"})
+    fund = pd.DataFrame(rows)
+    fund["lucro_ctrl"] = fund["lucro_total"]
+    return tmap, fund, shares, splits

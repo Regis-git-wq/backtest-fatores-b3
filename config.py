@@ -54,3 +54,10 @@ CLEAN_REVERT_WINDOW = 5         # pregões para o preço voltar ao nível anteri
 CLEAN_REVERT_TOL = 0.25         # "perto do nível anterior" = dentro de ±25%
 # Eventos reais a manter sem correção: lista de (ticker, "AAAA-MM-DD"). Vazia por padrão.
 CLEAN_KEEP = []
+
+# Fundamentos (CVM): fatores de valor e qualidade
+USE_FUNDAMENTALS = True
+FUND_YEARS = range(2010, 2026)       # anos de DFP e FRE a baixar
+FUND_MAX_AGE_MONTHS = 18             # exercício mais velho que isso não entra no sinal
+# Bancos e seguradoras: alavancagem não faz sentido; a qualidade usa só o ROE
+FINANCIALS = ["ITUB4", "BBDC4", "BBAS3", "SANB11", "BPAC11", "BBSE3", "PSSA3"]

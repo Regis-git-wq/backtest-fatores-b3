@@ -12,7 +12,7 @@ import os
 import pandas as pd
 
 import config as cfg
-from src import dados, fatores, carteiras, metricas, graficos, robustez
+from src import dados, fatores, carteiras, metricas, graficos, robustez, fundamentos
 
 RESULTS = "results"
 MARKET = "Universo EW"  # carteira igualmente ponderada de todas as ações elegíveis
@@ -34,14 +34,65 @@ def load_data(synthetic: bool):
     return px, cdi
 
 
-def build_signals(adj: pd.DataFrame, monthly: pd.DataFrame) -> dict[str, pd.DataFrame]:
+def build_signals(adj: pd.DataFrame, monthly: pd.DataFrame,
+                  fund: dict[str, pd.DataFrame] | None = None) -> dict[str, pd.DataFrame]:
     sig_mom = fatores.momentum(monthly, cfg.MOM_LOOKBACK, cfg.MOM_SKIP)
     sig_vol = fatores.low_volatility(adj, cfg.VOL_WINDOW_DAYS).reindex_like(sig_mom)
-    return {
+    out = {
         "Momentum": sig_mom,
         "Baixa_Vol": sig_vol,
         "Combinado": fatores.combined(sig_mom, sig_vol),
     }
+    if fund is not None:
+        val = fund["Valor"].reindex_like(sig_mom)
+        qual = fund["Qualidade"].reindex_like(sig_mom)
+        out["Valor"] = val
+        out["Qualidade"] = qual
+        out["Multifator"] = fatores.combined(sig_mom, sig_vol, val, qual)
+    return out
+
+
+def load_fundamentals(synthetic: bool, px: dict) -> dict[str, pd.DataFrame] | None:
+    """Sinais de valor e qualidade a partir dos dados da CVM (ou simulados).
+    Se a CVM estiver fora do ar, o backtest segue só com os fatores de preço."""
+    if not cfg.USE_FUNDAMENTALS:
+        return None
+    tickers = list(px["close"].columns)
+    if synthetic:
+        from tests.dados_sinteticos import gerar_fundamentos
+        tmap, fund, shares, splits = gerar_fundamentos(px)
+    else:
+        try:
+            tmap = fundamentos.ticker_map(tickers)
+            cnpjs = tmap["cnpj"].unique().tolist()
+            fund = fundamentos.statements(cnpjs, cfg.FUND_YEARS)
+            shares = fundamentos.share_counts(cnpjs, cfg.FUND_YEARS)
+            splits = dados.download_splits(tickers)
+        except Exception as e:
+            print(f"[aviso] fundamentos da CVM indisponíveis ({e}); seguindo só com os fatores de preço")
+            return None
+    missing = sorted(set(tickers) - set(tmap["ticker"]))
+    print(f"Fundamentos: {len(tmap)} ações ligadas a um CNPJ"
+          + (f"; sem CNPJ: {', '.join(missing)}" if missing else ""))
+
+    close_m = px["close"].resample("ME").last()
+    mcap = fundamentos.market_cap(close_m, splits, tmap, shares)
+    pit = fundamentos.point_in_time(fund, tmap, close_m.index, cfg.FUND_MAX_AGE_MONTHS)
+    sig = fundamentos.signals(pit, mcap, cfg.FINANCIALS)
+
+    # auditoria: mapeamento, cobertura, valores de mercado suspeitos e foto do último mês
+    save_csv(tmap, f"{RESULTS}/fundamentos_mapeamento.csv", index=False)
+    cov = fundamentos.coverage({"Valor de mercado": mcap, "B/M": sig["_bm"], "E/P": sig["_ep"],
+                                "ROE": sig["_roe"], "Valor": sig["Valor"], "Qualidade": sig["Qualidade"]})
+    save_csv(cov, f"{RESULTS}/fundamentos_cobertura.csv", index_label="Ano (dezembro)")
+    save_csv(fundamentos.implausible_caps(mcap, close_m), f"{RESULTS}/fundamentos_saltos_valor_mercado.csv",
+             index=False)
+    last = close_m.index[-1]
+    snap = pd.DataFrame({"Valor de mercado (R$ bi)": mcap.loc[last] / 1e9, "B/M": sig["_bm"].loc[last],
+                         "E/P": sig["_ep"].loc[last], "ROE": sig["_roe"].loc[last],
+                         "Alavancagem": sig["_lev"].loc[last]})
+    save_csv(snap, f"{RESULTS}/fundamentos_ultimo_mes.csv", index_label="Ticker")
+    return sig
 
 
 def main(synthetic: bool = False):
@@ -69,7 +120,8 @@ def main(synthetic: bool = False):
     market, _ = carteiras.portfolio_returns(carteiras.weights_from_mask(elig), monthly,
                                             cfg.TRANSACTION_COST_BPS)
 
-    signals = build_signals(adj, monthly)
+    fund_sig = load_fundamentals(synthetic, px)
+    signals = build_signals(adj, monthly, fund_sig)
 
     nefin = dados.load_nefin(cfg.NEFIN_FILE)
     mkt_excess = (market - rf).rename("Mercado").to_frame()
@@ -123,7 +175,7 @@ def main(synthetic: bool = False):
     if flagged:
         monthly_raw = dados.to_monthly_returns(adj_raw)
         specs += [{"nome": "Dados brutos (sem limpeza)", **base,
-                   "monthly": monthly_raw, "signals": build_signals(adj_raw, monthly_raw)}]
+                   "monthly": monthly_raw, "signals": build_signals(adj_raw, monthly_raw, fund_sig)}]
         specs += [{"nome": f"Sem as ações corrigidas ({len(flagged)})", **base, "excluir": flagged}]
     esp = robustez.por_especificacao(signals, elig, monthly, specs)
     save_csv(sub, f"{RESULTS}/robustez_subperiodos.csv", index=False)
