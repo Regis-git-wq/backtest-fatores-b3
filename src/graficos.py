@@ -53,14 +53,15 @@ def _log_wealth_axis(ax):
 def _end_labels(ax, wealth: pd.DataFrame, colors: dict, labels: dict):
     """Rótulo direto no fim de cada linha, com o valor final; afasta rótulos que colidem."""
     last = wealth.iloc[-1].sort_values()
-    ys, min_gap = [], 1.09  # distância mínima (razão, escala log)
+    ys, min_gap = [], 1.14  # distância mínima (razão, escala log)
     for name, v in last.items():
         y = v if not ys or v / ys[-1] >= min_gap else ys[-1] * min_gap
         ys.append(y)
         ax.annotate(f"{labels[name]}  R$ {v:.1f}".replace(".", ","), xy=(wealth.index[-1], v),
                     xytext=(wealth.index[-1] + pd.Timedelta(days=60), y),
                     color=INK, fontsize=10, va="center",
-                    arrowprops=dict(arrowstyle="-", color=colors[name], lw=1) if abs(y - v) / v > 0.02 else None)
+                    arrowprops=dict(arrowstyle="-", color=colors[name], lw=1, relpos=(0, 0.5),
+                                    shrinkA=0, shrinkB=2) if abs(y - v) / v > 0.02 else None)
 
 
 def hero(rets_by_strategy: dict[str, pd.DataFrame], top: str, market: str, path: str):
