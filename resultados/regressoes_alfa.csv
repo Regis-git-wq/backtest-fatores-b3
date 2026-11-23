@@ -1,31 +1,31 @@
 ﻿Termo;estrategia;carteira;modelo;coef;t;p-valor
-const;Momentum;G3;CAPM;0,0038;2,0357;0,0418
-Mercado;Momentum;G3;CAPM;0,8568;11,1671;0,0
-alfa a.a.;Momentum;G3;CAPM;0,0466;;
-R²;Momentum;G3;CAPM;0,7958;;
+const;Momentum;G3;CAPM;0,0039;2,0749;0,038
+Mercado;Momentum;G3;CAPM;0,8647;11,3562;0,0
+alfa a.a.;Momentum;G3;CAPM;0,0484;;
+R²;Momentum;G3;CAPM;0,7989;;
 N;Momentum;G3;CAPM;179,0;;
-const;Momentum;Long-Short;CAPM;0,0085;2,2967;0,0216
-Mercado;Momentum;Long-Short;CAPM;-0,3721;-2,3937;0,0167
-alfa a.a.;Momentum;Long-Short;CAPM;0,1065;;
-R²;Momentum;Long-Short;CAPM;0,1651;;
+const;Momentum;Long-Short;CAPM;0,0085;2,3201;0,0203
+Mercado;Momentum;Long-Short;CAPM;-0,3661;-2,3513;0,0187
+alfa a.a.;Momentum;Long-Short;CAPM;0,1075;;
+R²;Momentum;Long-Short;CAPM;0,1593;;
 N;Momentum;Long-Short;CAPM;179,0;;
-const;Baixa_Vol;G3;CAPM;0,0024;1,6091;0,1076
-Mercado;Baixa_Vol;G3;CAPM;0,6962;19,8617;0,0
-alfa a.a.;Baixa_Vol;G3;CAPM;0,029;;
-R²;Baixa_Vol;G3;CAPM;0,8213;;
+const;Baixa_Vol;G3;CAPM;0,0021;1,4294;0,1529
+Mercado;Baixa_Vol;G3;CAPM;0,6885;20,3371;0,0
+alfa a.a.;Baixa_Vol;G3;CAPM;0,0255;;
+R²;Baixa_Vol;G3;CAPM;0,8282;;
 N;Baixa_Vol;G3;CAPM;179,0;;
-const;Baixa_Vol;Long-Short;CAPM;0,0059;1,773;0,0762
-Mercado;Baixa_Vol;Long-Short;CAPM;-0,737;-7,7152;0,0
-alfa a.a.;Baixa_Vol;Long-Short;CAPM;0,073;;
-R²;Baixa_Vol;Long-Short;CAPM;0,492;;
+const;Baixa_Vol;Long-Short;CAPM;0,0055;1,6596;0,097
+Mercado;Baixa_Vol;Long-Short;CAPM;-0,7328;-7,8371;0,0
+alfa a.a.;Baixa_Vol;Long-Short;CAPM;0,0679;;
+R²;Baixa_Vol;Long-Short;CAPM;0,5083;;
 N;Baixa_Vol;Long-Short;CAPM;179,0;;
-const;Combinado;G3;CAPM;0,0036;2,3724;0,0177
-Mercado;Combinado;G3;CAPM;0,7326;14,2712;0,0
-alfa a.a.;Combinado;G3;CAPM;0,0438;;
-R²;Combinado;G3;CAPM;0,7997;;
+const;Combinado;G3;CAPM;0,0035;2,5555;0,0106
+Mercado;Combinado;G3;CAPM;0,7268;14,3931;0,0
+alfa a.a.;Combinado;G3;CAPM;0,0432;;
+R²;Combinado;G3;CAPM;0,8028;;
 N;Combinado;G3;CAPM;179,0;;
-const;Combinado;Long-Short;CAPM;0,0083;2,4497;0,0143
-Mercado;Combinado;Long-Short;CAPM;-0,6909;-5,4737;0,0
-alfa a.a.;Combinado;Long-Short;CAPM;0,1047;;
-R²;Combinado;Long-Short;CAPM;0,4316;;
+const;Combinado;Long-Short;CAPM;0,0074;2,322;0,0202
+Mercado;Combinado;Long-Short;CAPM;-0,6976;-5,5872;0,0
+alfa a.a.;Combinado;Long-Short;CAPM;0,092;;
+R²;Combinado;Long-Short;CAPM;0,4506;;
 N;Combinado;Long-Short;CAPM;179,0;;

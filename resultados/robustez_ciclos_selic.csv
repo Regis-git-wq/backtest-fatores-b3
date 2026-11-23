@@ -1,10 +1,10 @@
 ﻿Estratégia;Ciclo da Selic;Prêmio long-short a.a.;t (long-short);Excesso sobre o universo a.a.;t (excesso);Meses
-Momentum;Alta;0,1599;2,1074;0,0581;1,4953;64
-Momentum;Estável;-0,0259;-0,2188;-0,0044;-0,0787;54
-Momentum;Queda;0,1048;1,3385;0,058;1,3619;61
-Baixa_Vol;Alta;0,2202;2,5651;0,1081;2,8783;64
-Baixa_Vol;Estável;-0,1343;-1,0454;-0,0611;-1,1953;54
-Baixa_Vol;Queda;-0,0011;-0,0119;-0,0152;-0,3628;61
-Combinado;Alta;0,2046;2,418;0,0882;2,3937;64
-Combinado;Estável;-0,1205;-0,8421;-0,0531;-0,901;54
-Combinado;Queda;0,0951;1,1749;0,0456;1,1971;61
+Momentum;Alta;0,1622;2,1588;0,0641;1,7476;64
+Momentum;Estável;-0,0237;-0,2009;-0,0062;-0,1109;54
+Momentum;Queda;0,1048;1,3284;0,0599;1,3908;61
+Baixa_Vol;Alta;0,2107;2,516;0,103;2,7906;64
+Baixa_Vol;Estável;-0,1298;-1,0202;-0,0617;-1,2086;54
+Baixa_Vol;Queda;-0,0063;-0,0695;-0,0192;-0,4653;61
+Combinado;Alta;0,1753;2,103;0,0697;1,8365;64
+Combinado;Estável;-0,1179;-0,8381;-0,0485;-0,8423;54
+Combinado;Queda;0,0905;1,1263;0,0593;1,5717;61
