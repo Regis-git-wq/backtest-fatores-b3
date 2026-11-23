@@ -47,3 +47,10 @@ NEFIN_FILE = "data/nefin_factors.csv"
 SUBPERIODS = [("2011", "2015"), ("2016", "2020"), ("2021", "2025")]
 COST_GRID_BPS = [0, 25, 50]      # além do custo-base acima
 ALT_N_GROUPS = 5                 # quintis, como alternativa aos tercis
+
+# Limpeza de dados (retornos diários acima de ±50% no preço ajustado do Yahoo)
+CLEAN_THRESHOLD = 0.5
+CLEAN_REVERT_WINDOW = 5         # pregões para o preço voltar ao nível anterior (pico)
+CLEAN_REVERT_TOL = 0.25         # "perto do nível anterior" = dentro de ±25%
+# Eventos reais a manter sem correção: lista de (ticker, "AAAA-MM-DD"). Vazia por padrão.
+CLEAN_KEEP = []

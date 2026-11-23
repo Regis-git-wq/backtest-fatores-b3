@@ -85,6 +85,7 @@ Tabelas completas em [`resultados/`](resultados/). Os CSVs abrem direto no Excel
 | **Combinado** | Média dos z-scores dos dois sinais |
 | **Carteiras** | Tercis com pesos iguais, rebalanceamento mensal |
 | **Custos** | 10 bps por lado sobre o giro efetivo |
+| **Limpeza de dados** | Retornos diários acima de ±50% no preço ajustado: pico que reverte em até 5 pregões é removido; salto permanente (desdobramento mal ajustado ou cisão) tem o retorno do dia zerado. Relatório em `limpeza_dados.csv` |
 | **Benchmark** | Todas as ações elegíveis com pesos iguais, com dividendos e custos (comparação justa com as carteiras) |
 | **Taxa livre de risco** | CDI (Banco Central, série SGS 12) |
 | **Inferência** | Alfa de CAPM com erros-padrão Newey-West; modelo de 5 fatores do NEFIN-USP opcional |
@@ -95,12 +96,13 @@ O sinal usa apenas informação disponível até o fim do mês *t*, e a carteira
 <summary><b>🧪 Validação: como sei que o código não "vê o futuro"</b></summary>
 <br>
 
-`tests/test_pipeline.py` roda quatro testes num mercado simulado:
+`tests/test_pipeline.py` roda cinco testes num mercado simulado:
 
 1. **Sinal aleatório:** a long-short não tem retorno significativo (t ≈ 0).
 2. **Sinal que espia o mês seguinte:** o retorno sai absurdo. Isso confirma o alinhamento temporal, porque o código só ganha "de graça" quando recebe informação do futuro.
 3. **Sem look-ahead:** os sinais de uma data não mudam quando os dados posteriores são apagados.
 4. **Custos:** aumentar o custo de transação reduz o retorno da long-short, porque as duas pontas pagam custos.
+5. **Limpeza de dados:** um desdobramento não ajustado é neutralizado, um pico que reverte é removido, e dados sem problema ficam intactos.
 
 O mercado simulado embute um efeito de momentum conhecido, e o backtest o recupera (t ≈ 2,2). Os testes rodam automaticamente no GitHub Actions a cada alteração do código.
 
@@ -136,7 +138,7 @@ resultados/            saídas da última execução (CSV e PNG)
 ## Limitações
 
 - **Viés de sobrevivência:** o universo usa empresas listadas hoje, o que infla os retornos absolutos. O efeito é menor nas comparações entre tercis e contra o universo, que compartilham o mesmo viés.
-- **Dados do Yahoo Finance:** há 10 retornos diários acima de ±50%, em 5 ações ([lista](resultados/retornos_suspeitos.csv)). Parte é evento real, como as cisões do GPA, e parte parece erro de ajuste. A análise de robustez mostra o resultado sem essas ações.
+- **Dados do Yahoo Finance:** os preços ajustados têm erros pontuais. A limpeza automática trata os casos acima de ±50% num dia ([relatório](resultados/limpeza_dados.csv)), mas erros menores passam. A análise de robustez compara com os dados brutos.
 - **Universo pequeno:** com tercis de cerca de 20 ações, os resultados ficam sensíveis a poucas empresas.
 - **Custos simplificados:** o custo é fixo em bps, sem modelar o impacto de mercado.
 

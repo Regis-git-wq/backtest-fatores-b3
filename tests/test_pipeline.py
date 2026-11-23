@@ -6,6 +6,8 @@
    dinheiro quando enxerga t+1, ou seja, o código não vaza o futuro por conta própria.
 3. O sinal de momentum de t não muda se apagarmos os dados posteriores a t (sem look-ahead).
 4. Custos maiores reduzem o retorno da long-short (as duas pontas pagam custos).
+5. A limpeza de dados neutraliza um desdobramento não ajustado, remove um pico que
+   reverte e não mexe em dados sem problema.
 """
 import numpy as np
 import pandas as pd
@@ -46,6 +48,23 @@ def main():
     ls50 = carteiras.sort_backtest(mom, elig, monthly, 3, 50)["returns"]["Long-Short"].mean()
     print(f"4) long-short com custo 0: {ls0:.4f}/mês; com 50 bps: {ls50:.4f}/mês (deve cair)")
     assert ls50 < ls0 - 0.0005
+
+    # 5) Limpeza: desdobramento não ajustado (salto permanente) e pico de 2 dias
+    clean_ref = adj[["ACAO03", "ACAO04"]].dropna()
+    dirty = clean_ref.copy()
+    t_split, t_spike = dirty.index[1500], dirty.index[2000]
+    dirty.loc[:t_split - pd.Timedelta(days=1), "ACAO03"] *= 3      # queda de ~67% no dia do "desdobramento"
+    dirty.loc[t_spike:dirty.index[2001], "ACAO04"] *= 2.2          # pico de +120% que some 2 dias depois
+    fixed, report = dados.clean_prices(dirty)
+    assert set(report["tipo"]) == {"salto permanente", "pico revertido"}, report
+    r_ok = clean_ref["ACAO03"].pct_change().dropna()
+    r_fixed = fixed["ACAO03"].pct_change().dropna()
+    assert np.allclose(r_ok.drop(t_split), r_fixed.drop(t_split)) and abs(r_fixed[t_split]) < 1e-12
+    assert fixed.loc[t_spike:dirty.index[2001], "ACAO04"].isna().all()
+    assert np.allclose(fixed["ACAO04"].dropna(), clean_ref["ACAO04"].drop([t_spike, dirty.index[2001]]))
+    untouched, rep0 = dados.clean_prices(clean_ref)
+    assert rep0.empty and np.allclose(untouched, clean_ref)
+    print("5) limpeza: desdobramento neutralizado, pico removido, dados limpos intactos: OK")
     print("Todos os testes passaram.")
 
 

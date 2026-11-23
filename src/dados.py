@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -131,9 +132,55 @@ def cdi_monthly(cdi_daily: pd.Series) -> pd.Series:
     return (1 + cdi_daily).resample("ME").prod() - 1
 
 
-def flag_suspicious_returns(adj_close: pd.DataFrame, threshold: float = 0.5) -> pd.DataFrame:
-    """Lista retornos diários acima de ±threshold (possíveis erros de ajuste do Yahoo)."""
-    r = adj_close.pct_change(fill_method=None)
-    s = r.stack()
-    s = s[s.abs() > threshold]
-    return s.rename("retorno_diario").reset_index().rename(columns={"level_0": "data", "level_1": "ticker"})
+def clean_prices(adj_close: pd.DataFrame, threshold: float = 0.5, revert_window: int = 5,
+                 revert_tol: float = 0.25, keep: list[tuple[str, str]] | None = None,
+                 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Trata retornos diários acima de ±threshold no preço ajustado.
+
+    Cada caso é classificado em:
+    - "pico revertido": o preço volta para perto do nível anterior (±revert_tol) em até
+      revert_window pregões. É erro pontual de dado; os preços do pico viram NaN.
+    - "salto permanente": o novo nível se mantém. Em ações líquidas, isso quase sempre é
+      desdobramento/grupamento mal ajustado ou cisão (o acionista recebe as novas ações,
+      então não é perda). O retorno do dia é zerado, reescalando o histórico anterior.
+    Casos em `keep` (ticker, "AAAA-MM-DD") são mantidos como estão: use para eventos reais.
+
+    Retorna (preços limpos, relatório com uma linha por caso).
+    """
+    keep = {(t, pd.Timestamp(d)) for t, d in (keep or [])}
+    out = adj_close.copy()
+    log = []
+    for col in out.columns:
+        s = out[col].dropna().copy()
+        handled = set()
+        for _ in range(50):  # cada correção pode revelar ou eliminar outros casos
+            r = s.pct_change()
+            cases = [t for t in r.index[r.abs() > threshold] if t not in handled]
+            if not cases:
+                break
+            t = cases[0]
+            handled.add(t)
+            i = s.index.get_loc(t)
+            p_before, p_jump = s.iloc[i - 1], s.iloc[i]
+            entry = {"data": t, "ticker": col, "retorno_original": p_jump / p_before - 1}
+            if (col, t) in keep:
+                log.append({**entry, "tipo": "mantido (exceção manual)", "acao": "nenhuma"})
+                continue
+            back = None
+            for k in range(1, revert_window + 1):
+                if i + k < len(s) and abs(np.log(s.iloc[i + k] / p_before)) <= np.log(1 + revert_tol):
+                    back = k
+                    break
+            if back is not None:
+                s.iloc[i:i + back] = np.nan
+                s = s.dropna()
+                log.append({**entry, "tipo": "pico revertido",
+                            "acao": f"{back} pregão(ões) removido(s)"})
+            else:
+                s.iloc[:i] = s.iloc[:i] * (p_jump / p_before)
+                log.append({**entry, "tipo": "salto permanente",
+                            "acao": "retorno do dia zerado (histórico reescalado)"})
+        out[col] = s.reindex(out.index)
+        # mantém NaN onde o original já era NaN e onde o pico foi removido
+    report = pd.DataFrame(log, columns=["data", "ticker", "retorno_original", "tipo", "acao"])
+    return out, report.sort_values(["data", "ticker"]).reset_index(drop=True)

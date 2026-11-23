@@ -72,6 +72,7 @@ Tables: [`robustez_subperiodos.csv`](resultados/robustez_subperiodos.csv), [`rob
 | **Combined** | Average of the two signals' z-scores |
 | **Portfolios** | Equal-weighted terciles, rebalanced monthly |
 | **Costs** | 10 bps per side on actual turnover |
+| **Data cleaning** | Daily returns beyond ±50% in the adjusted price: a spike that reverts within 5 trading days is removed; a permanent jump (mishandled split or spin-off) has that day's return set to zero. Report in `limpeza_dados.csv` |
 | **Benchmark** | Equal-weighted portfolio of all eligible stocks, with dividends and costs |
 | **Risk-free rate** | CDI (Central Bank of Brazil, SGS series 12) |
 | **Inference** | CAPM alpha with Newey-West standard errors; optional NEFIN-USP 5-factor model |
@@ -82,12 +83,13 @@ Signals use only information available at the end of month *t*; portfolios are h
 <summary><b>🧪 Validation: how I know the code doesn't "see the future"</b></summary>
 <br>
 
-`tests/test_pipeline.py` runs four checks on a simulated market:
+`tests/test_pipeline.py` runs five checks on a simulated market:
 
 1. **Random signal:** the long-short return is not significant (t ≈ 0).
 2. **Signal that peeks at next month:** returns are absurdly high, confirming the time alignment: the code only makes "free money" when it is given future information.
 3. **No look-ahead:** a date's signals don't change when all later data is deleted.
 4. **Costs:** higher transaction costs reduce the long-short return, since both legs pay costs.
+5. **Data cleaning:** an unadjusted split is neutralized, a reverting spike is removed, and clean data is left untouched.
 
 The simulated market embeds a known momentum effect, and the backtest recovers it (t ≈ 2.2). Tests run automatically on GitHub Actions on every code change.
 
@@ -104,7 +106,7 @@ The simulated market embeds a known momentum effect, and the backtest recovers i
 ## Limitations
 
 - **Survivorship bias:** the universe uses currently listed companies, which inflates absolute returns. The effect is smaller for comparisons between terciles and against the universe, which share the same bias.
-- **Yahoo Finance data:** 10 daily returns exceed ±50%, across 5 stocks ([list](resultados/retornos_suspeitos.csv)). Some are real corporate events (GPA spin-offs), others look like adjustment errors. The robustness analysis shows results without those stocks.
+- **Yahoo Finance data:** adjusted prices contain occasional errors. Automatic cleaning handles moves beyond ±50% in a day ([report](resultados/limpeza_dados.csv)), but smaller errors slip through. The robustness analysis compares against the raw data.
 - **Small universe:** terciles of about 20 stocks make results sensitive to a few names.
 - **Simplified costs:** a flat bps cost, with no market-impact model.
 

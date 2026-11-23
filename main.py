@@ -28,24 +28,37 @@ def save_csv(df: pd.DataFrame, path: str, index: bool = True, index_label: str |
 def load_data(synthetic: bool):
     if synthetic:
         from tests.dados_sinteticos import gerar
-        return gerar()
+        return gerar(com_erros=True)
     px = dados.download_prices(cfg.TICKERS, cfg.START_DATE, cfg.END_DATE, cfg.BENCHMARK)
     cdi = dados.download_cdi(cfg.START_DATE, cfg.END_DATE)
     return px, cdi
+
+
+def build_signals(adj: pd.DataFrame, monthly: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    sig_mom = fatores.momentum(monthly, cfg.MOM_LOOKBACK, cfg.MOM_SKIP)
+    sig_vol = fatores.low_volatility(adj, cfg.VOL_WINDOW_DAYS).reindex_like(sig_mom)
+    return {
+        "Momentum": sig_mom,
+        "Baixa_Vol": sig_vol,
+        "Combinado": fatores.combined(sig_mom, sig_vol),
+    }
 
 
 def main(synthetic: bool = False):
     os.makedirs(RESULTS, exist_ok=True)
     px, cdi_daily = load_data(synthetic)
 
-    adj, close, vol = px["adj_close"], px["close"], px["volume"]
-    monthly = dados.to_monthly_returns(adj)
+    adj_raw, close, vol = px["adj_close"], px["close"], px["volume"]
     ibov = dados.to_monthly_returns(px["benchmark"])["IBOV"]
     rf = dados.cdi_monthly(cdi_daily)
 
-    suspicious = dados.flag_suspicious_returns(adj)
-    if not synthetic:
-        save_csv(suspicious, f"{RESULTS}/retornos_suspeitos.csv", index=False)
+    # Limpeza: retornos diários acima de ±50% no preço ajustado (erros do Yahoo)
+    adj, cleaning = dados.clean_prices(adj_raw, cfg.CLEAN_THRESHOLD, cfg.CLEAN_REVERT_WINDOW,
+                                       cfg.CLEAN_REVERT_TOL, cfg.CLEAN_KEEP)
+    save_csv(cleaning, f"{RESULTS}/limpeza_dados.csv", index=False)
+    print(f"Limpeza de dados: {len(cleaning)} caso(s) tratado(s) "
+          f"({', '.join(sorted(cleaning['ticker'].unique())) or 'nenhum'})")
+    monthly = dados.to_monthly_returns(adj)
 
     elig = fatores.eligibility(adj, close, vol, cfg.MIN_HISTORY_DAYS,
                                cfg.MIN_MEDIAN_VOLUME_BRL, cfg.MIN_PRICE_BRL)
@@ -56,13 +69,7 @@ def main(synthetic: bool = False):
     market, _ = carteiras.portfolio_returns(carteiras.weights_from_mask(elig), monthly,
                                             cfg.TRANSACTION_COST_BPS)
 
-    sig_mom = fatores.momentum(monthly, cfg.MOM_LOOKBACK, cfg.MOM_SKIP)
-    sig_vol = fatores.low_volatility(adj, cfg.VOL_WINDOW_DAYS).reindex_like(sig_mom)
-    signals = {
-        "Momentum": sig_mom,
-        "Baixa_Vol": sig_vol,
-        "Combinado": fatores.combined(sig_mom, sig_vol),
-    }
+    signals = build_signals(adj, monthly)
 
     nefin = dados.load_nefin(cfg.NEFIN_FILE)
     mkt_excess = (market - rf).rename("Mercado").to_frame()
@@ -112,9 +119,12 @@ def main(synthetic: bool = False):
     specs = [{"nome": f"Base (tercis, {cfg.TRANSACTION_COST_BPS} bps)", **base}]
     specs += [{"nome": f"Custo de {c} bps", **base, "custo_bps": c} for c in cfg.COST_GRID_BPS]
     specs += [{"nome": f"{cfg.ALT_N_GROUPS} grupos", **base, "grupos": cfg.ALT_N_GROUPS}]
-    flagged = sorted(suspicious["ticker"].unique())
+    flagged = sorted(cleaning["ticker"].unique())
     if flagged:
-        specs += [{"nome": f"Sem ações com retornos suspeitos ({len(flagged)})", **base, "excluir": flagged}]
+        monthly_raw = dados.to_monthly_returns(adj_raw)
+        specs += [{"nome": "Dados brutos (sem limpeza)", **base,
+                   "monthly": monthly_raw, "signals": build_signals(adj_raw, monthly_raw)}]
+        specs += [{"nome": f"Sem as ações corrigidas ({len(flagged)})", **base, "excluir": flagged}]
     esp = robustez.por_especificacao(signals, elig, monthly, specs)
     save_csv(sub, f"{RESULTS}/robustez_subperiodos.csv", index=False)
     save_csv(reg, f"{RESULTS}/robustez_ciclos_selic.csv", index=False)

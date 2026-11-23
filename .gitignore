@@ -6,3 +6,6 @@ data/*.json
 results/
 .venv/
 .ipynb_checkpoints/
+task_plan.md
+findings.md
+progress.md

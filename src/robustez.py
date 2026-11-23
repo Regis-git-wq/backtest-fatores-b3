@@ -64,15 +64,18 @@ def por_regime(rets_by_strategy: dict[str, pd.DataFrame], regime: pd.Series,
 
 def por_especificacao(signals: dict[str, pd.DataFrame], eligible: pd.DataFrame,
                       monthly: pd.DataFrame, specs: list[dict]) -> pd.DataFrame:
-    """Refaz o backtest para cada especificação (custo, número de grupos, ações excluídas)."""
+    """Refaz o backtest para cada especificação (custo, número de grupos, ações excluídas,
+    ou outra base de dados: chaves opcionais "monthly" e "signals")."""
     rows = []
     for spec in specs:
-        drop = [c for c in spec.get("excluir", []) if c in monthly.columns]
+        base_monthly = spec.get("monthly", monthly)
+        base_signals = spec.get("signals", signals)
+        drop = [c for c in spec.get("excluir", []) if c in base_monthly.columns]
         elig = eligible.drop(columns=drop)
-        mret = monthly.drop(columns=drop)
+        mret = base_monthly.drop(columns=drop)
         n, cost = spec["grupos"], spec["custo_bps"]
         market, _ = carteiras.portfolio_returns(carteiras.weights_from_mask(elig), mret, cost)
-        for name, sig in signals.items():
+        for name, sig in base_signals.items():
             bt = carteiras.sort_backtest(sig.drop(columns=drop), elig, mret, n, cost)["returns"]
             bt["mkt"] = market.reindex(bt.index)
             bt = bt.dropna()

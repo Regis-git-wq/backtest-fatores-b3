@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 
 
-def gerar(n_stocks: int = 60, start: str = "2010-01-01", end: str = "2025-12-31", seed: int = 42):
+def gerar(n_stocks: int = 60, start: str = "2010-01-01", end: str = "2025-12-31", seed: int = 42,
+          com_erros: bool = False):
     rng = np.random.default_rng(seed)
     days = pd.bdate_range(start, end)
     n = len(days)
@@ -40,4 +41,8 @@ def gerar(n_stocks: int = 60, start: str = "2010-01-01", end: str = "2025-12-31"
     # CDI com ciclos de alta e queda (entre 6% e 14% a.a.), para exercitar a análise por regime
     annual = 0.10 + 0.04 * np.sin(np.arange(n) / 252 * 2 * np.pi / 5)
     cdi = pd.Series((1 + annual) ** (1 / 252) - 1, index=days, name="CDI")
+    if com_erros:
+        # erros típicos do Yahoo, para exercitar a limpeza: desdobramento não ajustado e pico
+        adj.iloc[:2500, 1] *= 4
+        adj.iloc[3000:3002, 2] *= 2.5
     return {"adj_close": adj, "close": adj, "volume": volume, "benchmark": bench}, cdi
