@@ -24,7 +24,7 @@ Mercado;Combinado;G3;CAPM;0,7268;14,3931;0,0
 alfa a.a.;Combinado;G3;CAPM;0,0432;;
 R²;Combinado;G3;CAPM;0,8028;;
 N;Combinado;G3;CAPM;179,0;;
-const;Combinado;Long-Short;CAPM;0,0074;2,322;0,0202
+const;Combinado;Long-Short;CAPM;0,0074;2,3219;0,0202
 Mercado;Combinado;Long-Short;CAPM;-0,6976;-5,5872;0,0
 alfa a.a.;Combinado;Long-Short;CAPM;0,092;;
 R²;Combinado;Long-Short;CAPM;0,4506;;
