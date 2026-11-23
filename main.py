@@ -63,20 +63,26 @@ def load_fundamentals(synthetic: bool, px: dict) -> dict[str, pd.DataFrame] | No
         tmap, fund, shares, splits = gerar_fundamentos(px)
     else:
         try:
-            tmap = fundamentos.ticker_map(tickers)
+            tmap = fundamentos.ticker_map(tickers, overrides=cfg.CNPJ_OVERRIDES)
             cnpjs = tmap["cnpj"].unique().tolist()
             fund = fundamentos.statements(cnpjs, cfg.FUND_YEARS)
             shares = fundamentos.share_counts(cnpjs, cfg.FUND_YEARS)
             splits = dados.download_splits(tickers)
         except Exception as e:
-            print(f"[aviso] fundamentos da CVM indisponíveis ({e}); seguindo só com os fatores de preço")
+            import traceback
+            traceback.print_exc()
+            print(f"[aviso] fundamentos da CVM indisponíveis ({e!r}); seguindo só com os fatores de preço")
             return None
     missing = sorted(set(tickers) - set(tmap["ticker"]))
     print(f"Fundamentos: {len(tmap)} ações ligadas a um CNPJ"
           + (f"; sem CNPJ: {', '.join(missing)}" if missing else ""))
 
+    shares, share_fix = fundamentos.align_share_changes(shares, splits, tmap)
+    save_csv(share_fix, f"{RESULTS}/fundamentos_ajustes_acoes.csv", index=False)
     close_m = px["close"].resample("ME").last()
     mcap = fundamentos.market_cap(close_m, splits, tmap, shares)
+    mcap, dropped = fundamentos.drop_inconsistent_segments(mcap, close_m)
+    save_csv(dropped, f"{RESULTS}/fundamentos_trechos_descartados.csv", index=False)
     pit = fundamentos.point_in_time(fund, tmap, close_m.index, cfg.FUND_MAX_AGE_MONTHS)
     sig = fundamentos.signals(pit, mcap, cfg.FINANCIALS)
 

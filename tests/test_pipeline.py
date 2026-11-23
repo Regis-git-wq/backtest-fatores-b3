@@ -79,6 +79,24 @@ def main():
     assert np.isclose(mcap.loc[m, "ACAO10"], close_m.loc[m, "ACAO10"] / 5 * 1e9)
     assert np.isclose(mcap.loc[pd.Timestamp("2017-06-30"), "ACAO05"],
                       close_m.loc[pd.Timestamp("2017-06-30"), "ACAO05"] * 2 * 1e9)
+    early = shares.copy()
+    early.loc[(early.cnpj == tmap.loc[tmap.ticker == "ACAO05", "cnpj"].iloc[0]) & (early.acoes == 2e9),
+              "data"] = pd.Timestamp("2018-03-01")  # FRE registra a aprovação 3 meses antes
+    early = pd.concat([early, pd.DataFrame({"cnpj": [tmap.cnpj.iloc[1]] * 3,
+                                            "data": pd.to_datetime(["2012-01-01", "2013-01-01", "2014-01-01"]),
+                                            "acoes": [1e9, 1e8, 1e9]})])   # erro de digitação no meio
+    fixed_sh, rep = fundamentos.align_share_changes(early, splits, tmap)
+    assert fundamentos.implausible_caps(fundamentos.market_cap(close_m, splits, tmap, fixed_sh), close_m).empty
+    assert set(rep["acao"]) == {"movida para a data do split", "removida (desfeita no registro seguinte)"}
+    bad = mcap.copy()
+    bad.loc["2015-01-31":"2015-06-30", "ACAO20"] *= 10        # trecho errado que vai e volta
+    bad.loc["2019-01-31":, "ACAO21"] *= 3                      # salto moderado sem volta (fusão): mantido
+    bad.loc[:"2013-12-31", "ACAO22"] *= 50                     # salto extremo sem volta: antes é descartado
+    fixed_mc, segs = fundamentos.drop_inconsistent_segments(bad, close_m)
+    assert fixed_mc.loc["2015-01-31":"2015-06-30", "ACAO20"].isna().all()
+    assert fixed_mc["ACAO21"].notna().sum() == bad["ACAO21"].notna().sum()
+    assert fixed_mc.loc[:"2013-12-31", "ACAO22"].isna().all() and fixed_mc.loc["2014-01-31":, "ACAO22"].notna().all()
+    assert len(segs) == 2
     for txt, n in [("1 KLBN3 + 4 KLBN4", 5), ("1 ON / 2 PN", 3), ("1 ENG3 e 4 ENGI4", 5),
                    ("2 ações preferenciais e 1 ação ordinária", 3), ("1 PN + 3 Recibos de Subscrição", None)]:
         assert fundamentos.parse_unit(txt) == n, txt

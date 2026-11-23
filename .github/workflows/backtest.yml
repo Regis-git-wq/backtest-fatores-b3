@@ -21,6 +21,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - name: Cache dos dados baixados (CVM e Yahoo)
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: dados-${{ hashFiles('config.py') }}-${{ github.run_id }}
+          restore-keys: dados-${{ hashFiles('config.py') }}-
       - run: pip install -r requirements.txt
       - name: Testes de sanidade
         run: python -m tests.test_pipeline
@@ -28,6 +34,7 @@ jobs:
         run: python main.py
       - name: Salvar resultados no repositório
         run: |
+          rm -f resultados/*.csv resultados/*.png
           cp results/*.csv results/*.png resultados/
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

@@ -61,3 +61,8 @@ FUND_YEARS = range(2010, 2026)       # anos de DFP e FRE a baixar
 FUND_MAX_AGE_MONTHS = 18             # exercício mais velho que isso não entra no sinal
 # Bancos e seguradoras: alavancagem não faz sentido; a qualidade usa só o ROE
 FINANCIALS = ["ITUB4", "BBDC4", "BBAS3", "SANB11", "BPAC11", "BBSE3", "PSSA3"]
+# Tickers que a FCA da CVM não liga a um CNPJ (conferidos manualmente)
+CNPJ_OVERRIDES = {
+    "CSNA3": {"cnpj": "33.042.730/0001-04", "empresa": "CIA SIDERURGICA NACIONAL"},
+    "BPAC11": {"cnpj": "30.306.294/0001-45", "empresa": "BCO BTG PACTUAL S.A.", "acoes_por_unit": 3},
+}

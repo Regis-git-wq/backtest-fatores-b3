@@ -62,6 +62,14 @@ def download_prices(tickers: list[str], start: str, end: str, benchmark: str) ->
     for k in out:
         out[k].columns = [c.replace(".SA", "") for c in out[k].columns]
 
+    # o Yahoo às vezes falha em um ticker por motivo passageiro: tenta de novo, um a um
+    retry = [t for t in tickers if t not in out["adj_close"] or out["adj_close"][t].dropna().empty]
+    for t in retry:
+        one = yf.download(f"{t}.SA", start=start, end=end, auto_adjust=False, progress=False)
+        if not one.empty:
+            for k, col in [("adj_close", "Adj Close"), ("close", "Close"), ("volume", "Volume")]:
+                v = one[col]
+                out[k][t] = v.iloc[:, 0] if isinstance(v, pd.DataFrame) else v
     failed = [t for t in tickers if t not in out["adj_close"] or out["adj_close"][t].dropna().empty]
     if failed:
         print(f"[aviso] sem dados para: {', '.join(failed)} (removidos)")

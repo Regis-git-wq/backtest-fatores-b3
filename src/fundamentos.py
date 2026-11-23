@@ -59,9 +59,11 @@ def parse_unit(text: str) -> int | None:
     return sum(nums) if nums else None
 
 
-def ticker_map(tickers: list[str], years=range(2018, 2026)) -> pd.DataFrame:
+def ticker_map(tickers: list[str], years=range(2018, 2026),
+               overrides: dict[str, dict] | None = None) -> pd.DataFrame:
     """Liga cada ticker ao CNPJ da companhia (FCA, valores mobiliários).
-    Para units, informa quantas ações cada unit representa e quando começou a ser negociada."""
+    Para units, informa quantas ações cada unit representa e quando começou a ser negociada.
+    `overrides` completa tickers que a FCA não traz: {ticker: {"cnpj": ..., "acoes_por_unit": ...}}."""
     frames = []
     for y in years:
         z = _zip("FCA", y)
@@ -81,6 +83,11 @@ def ticker_map(tickers: list[str], years=range(2018, 2026)) -> pd.DataFrame:
                            for c, t in zip(last["Composicao_BDR_Unit"], last["Valor_Mobiliario"])],
         "inicio_negociacao": pd.to_datetime(last["Data_Inicio_Negociacao"], errors="coerce").values,
     })
+    for t, info in (overrides or {}).items():
+        if t in tickers and t not in set(out["ticker"]):
+            out = pd.concat([out, pd.DataFrame([{"ticker": t, "cnpj": info["cnpj"], "empresa": info.get("empresa", t),
+                                                 "acoes_por_unit": info.get("acoes_por_unit", 1),
+                                                 "inicio_negociacao": pd.NaT}])])
     return out.reset_index(drop=True)
 
 
@@ -93,6 +100,13 @@ def _pick(df: pd.DataFrame, pattern: str, level: int | None = None) -> pd.Series
         m &= df["CD_CONTA"].str.count(r"\.") == level
     sub = df[m].sort_values("CD_CONTA")
     return sub.groupby(["CNPJ_CIA", "DT_REFER"])["valor"].first()
+
+
+def _pick_last(df: pd.DataFrame, pattern: str, level: int) -> pd.Series:
+    m = df["DS_CONTA"].str.contains(pattern, case=False, regex=True, na=False)
+    m &= df["CD_CONTA"].str.count(r"\.") == level
+    sub = df[m].sort_values("CD_CONTA")
+    return sub.groupby(["CNPJ_CIA", "DT_REFER"])["valor"].last()
 
 
 def _statement(z: zipfile.ZipFile, kind: str, year: int, cnpjs: set[str]) -> pd.DataFrame:
@@ -110,20 +124,27 @@ def _extract(bpa: pd.DataFrame, bpp: pd.DataFrame, dre: pd.DataFrame, consolidat
     if bpa.empty or bpp.empty or dre.empty:
         return pd.DataFrame()
     ativo = bpa[bpa["CD_CONTA"] == "1"].groupby(["CNPJ_CIA", "DT_REFER"])["valor"].first()
+    # o nome da conta de lucro varia ("Lucro/Prejuízo Consolidado do Período",
+    # "Lucro ou Prejuízo Líquido Consolidado do Período", ...): pega a última conta de nível 1
+    # que começa com "Lucro" e fala do período/exercício (exclui lucro por ação, 3.99)
+    dre_lucro = dre[~dre["CD_CONTA"].str.startswith("3.99")]
+    lucro_pat = r"^Lucro.*(?:Per[ií]odo|Exerc[ií]cio)"
     if consolidated:
         pl = _pick(bpp, r"^Patrim[oô]nio L[ií]quido Consolidado", 1)
-        lucro_total = _pick(dre, r"^Lucro/Preju[ií]zo Consolidado do Per[ií]odo", 1)
-        lucro_ctrl = _pick(dre, r"Atribu[ií]do a S[oó]cios da Empresa Controladora", 2)
+        lucro_total = _pick_last(dre_lucro, lucro_pat, 1)
+        lucro_ctrl = _pick(dre, r"Atribu[ií]do a S[oó]cios da (?:Empresa )?Controladora", 2)
     else:
         pl = _pick(bpp, r"^Patrim[oô]nio L[ií]quido", 1)
-        lucro_total = _pick(dre, r"^Lucro/Preju[ií]zo do Per[ií]odo", 1)
+        lucro_total = _pick_last(dre_lucro, lucro_pat, 1)
         lucro_ctrl = pd.Series(dtype=float)
     minor = _pick(bpp, r"N[aã]o Controladores", 2)
     out = pd.DataFrame({"ativo": ativo, "pl_total": pl, "minoritarios": minor,
                         "lucro_total": lucro_total, "lucro_ctrl": lucro_ctrl})
     out["minoritarios"] = out["minoritarios"].fillna(0.0)
     out["pl_ctrl"] = out["pl_total"] - out["minoritarios"]
-    out["lucro_ctrl"] = out["lucro_ctrl"].fillna(out["lucro_total"])
+    # alguns emissores deixam a conta dos controladores zerada: usa o lucro total
+    zero_ctrl = (out["lucro_ctrl"].fillna(0) == 0) & (out["lucro_total"].fillna(0) != 0)
+    out["lucro_ctrl"] = out["lucro_ctrl"].where(~zero_ctrl).fillna(out["lucro_total"])
     out["fonte"] = "consolidada" if consolidated else "individual"
     return out
 
@@ -146,7 +167,10 @@ def statements(cnpjs: list[str], years=range(2010, 2026)) -> pd.DataFrame:
         bad = con.index[(con["pl_total"].fillna(0) == 0) | (con["lucro_total"].fillna(0) == 0)] if not con.empty else []
         merged = pd.concat([con.drop(index=bad, errors="ignore"),
                             ind[~ind.index.isin(con.drop(index=bad, errors="ignore").index)]])
-        merged["disponivel_em"] = receb.reindex(merged.index)
+        if merged.empty:
+            continue
+        merged.index = pd.MultiIndex.from_tuples(merged.index, names=["CNPJ_CIA", "DT_REFER"])
+        merged["disponivel_em"] = receb.reindex(merged.index).values
         rows.append(merged)
     out = pd.concat(rows).reset_index().rename(columns={"CNPJ_CIA": "cnpj", "DT_REFER": "exercicio"})
     out["exercicio"] = pd.to_datetime(out["exercicio"])
@@ -185,6 +209,60 @@ def share_counts(cnpjs: list[str], years=range(2010, 2026)) -> pd.DataFrame:
     return c.rename(columns={"CNPJ_Companhia": "cnpj"})[["cnpj", "data", "acoes"]]
 
 
+def align_share_changes(shares: pd.DataFrame, splits: dict[str, pd.Series], tmap: pd.DataFrame,
+                        window_days: int = 270, tol: float = 0.30) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Corrige o descasamento de datas entre o FRE e o preço.
+
+    O FRE registra um desdobramento/grupamento/bonificação na data de APROVAÇÃO; o preço só
+    muda na data de EXECUÇÃO (a data do split no Yahoo). Se uma mudança no nº de ações tem a
+    mesma razão de um split do Yahoo a até `window_days` dias, ela é movida para a data do split.
+    A razão pode diferir em até `tol` (30%), porque às vezes o desdobramento vem junto com
+    uma emissão ou um cancelamento de ações (ex.: MGLU3 em 2019, 8:1 mais emissão).
+    Também remove registros isolados que são desfeitos logo depois sem split (erro de digitação:
+    o nº de ações cai 10× e volta no formulário seguinte). Retorna (ações corrigidas, relatório)."""
+    by_cnpj = tmap.groupby("cnpj")["ticker"].first().to_dict()
+    out, log = [], []
+    for cnpj, g in shares.sort_values("data").groupby("cnpj"):
+        g = g[g["acoes"].ne(g["acoes"].shift())].copy().reset_index(drop=True)  # tira repetições
+        sp = splits.get(by_cnpj.get(cnpj), pd.Series(dtype=float))
+        sp_dates = [(pd.Timestamp(d).tz_localize(None) if pd.Timestamp(d).tzinfo else pd.Timestamp(d)).normalize()
+                    for d in sp.index]
+        matched = [False] * len(g)
+        for i in range(1, len(g)):
+            r = g.loc[i, "acoes"] / g.loc[i - 1, "acoes"]
+            best = None
+            if abs(np.log(r)) <= np.log(1.01):  # mudança pequena (emissão, recompra): não é split
+                continue
+            for d, ratio in zip(sp_dates, sp.values):
+                if (abs(np.log(r / ratio)) <= np.log(1 + tol) and abs(np.log(ratio)) > np.log(1.01)
+                        and abs((d - g.loc[i, "data"]).days) <= window_days):
+                    if best is None or abs((d - g.loc[i, "data"]).days) < abs((best - g.loc[i, "data"]).days):
+                        best = d
+            if best is not None:
+                matched[i] = True
+                if best != g.loc[i, "data"]:
+                    log.append({"cnpj": cnpj, "ticker": by_cnpj.get(cnpj), "data_fre": g.loc[i, "data"],
+                                "data_split": best, "razao": r, "acao": "movida para a data do split"})
+                    g.loc[i, "data"] = best
+        # erro de digitação: salto grande sem split, desfeito no registro seguinte
+        drop = set()
+        for i in range(1, len(g) - 1):
+            r1 = g.loc[i, "acoes"] / g.loc[i - 1, "acoes"]
+            r2 = g.loc[i + 1, "acoes"] / g.loc[i, "acoes"]
+            if (not matched[i] and not matched[i + 1] and abs(np.log(r1)) > np.log(1.5)
+                    and abs(r1 * r2 - 1) <= 0.10):
+                drop.add(i)
+                log.append({"cnpj": cnpj, "ticker": by_cnpj.get(cnpj), "data_fre": g.loc[i, "data"],
+                            "data_split": pd.NaT, "razao": r1, "acao": "removida (desfeita no registro seguinte)"})
+        g = g.drop(index=list(drop))
+        g["ordem"] = range(len(g))
+        # duas mudanças movidas para o mesmo split: vale a mais recente no FRE
+        g = g.sort_values(["data", "ordem"]).drop_duplicates("data", keep="last").drop(columns="ordem")
+        out.append(g)
+    report = pd.DataFrame(log, columns=["cnpj", "ticker", "data_fre", "data_split", "razao", "acao"])
+    return pd.concat(out).reset_index(drop=True), report
+
+
 # ---------------------------------------------------------------- valor de mercado
 
 def split_factor(splits: pd.Series, index: pd.DatetimeIndex) -> pd.Series:
@@ -210,8 +288,13 @@ def market_cap(close_monthly: pd.DataFrame, splits: dict[str, pd.Series], tmap: 
         raw = close_monthly[t] * split_factor(splits.get(t, pd.Series(dtype=float)), close_monthly.index)
         per_unit = row["acoes_por_unit"]
         if per_unit and per_unit > 1:
-            start = row["inicio_negociacao"]
-            is_unit = close_monthly.index >= start if pd.notna(start) else np.ones(len(raw), bool)
+            # Se o Yahoo registra um "split" com a mesma razão da unit, a série antes dele é de
+            # uma ação isolada (ex.: KLBN11 antes de 2014): divide só a partir dessa data.
+            sp = splits.get(t, pd.Series(dtype=float))
+            creation = [pd.Timestamp(d).tz_localize(None).normalize() if pd.Timestamp(d).tzinfo
+                        else pd.Timestamp(d).normalize()
+                        for d, r in sp.items() if abs(r / per_unit - 1) <= 0.01]
+            is_unit = close_monthly.index >= min(creation) if creation else np.ones(len(raw), bool)
             raw = raw.where(~is_unit, raw / per_unit)
         sh = shares[shares["cnpj"] == row["cnpj"]].set_index("data")["acoes"].sort_index()
         if sh.empty:
@@ -219,6 +302,48 @@ def market_cap(close_monthly: pd.DataFrame, splits: dict[str, pd.Series], tmap: 
         n = sh.reindex(sh.index.union(close_monthly.index)).ffill().reindex(close_monthly.index)
         out[t] = raw * n
     return out
+
+
+def drop_inconsistent_segments(mcap: pd.DataFrame, close_monthly: pd.DataFrame, jump: float = 2.0,
+                               max_months: int = 24, tol: float = 0.25,
+                               extreme: float = 4.0) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Descarta trechos de valor de mercado que não são confiáveis, em vez de dar um palpite.
+
+    1. Salto implausível seguido de salto inverso (o nível volta): o trecho entre os dois
+       está errado (nº de ações e preço em bases diferentes).
+    2. Salto extremo (≥ `extreme` vezes) sem volta: na conferência com os dados reais, o
+       trecho ANTERIOR era o errado (ex.: SANB11 antes de 2014, RAIL3 antes de ago/2015).
+    Saltos moderados sem volta (fusões, aumentos de capital) são mantidos."""
+    out = mcap.copy()
+    log = []
+    rel = (mcap / mcap.shift(1)) / (close_monthly / close_monthly.shift(1))
+    for t in mcap.columns:
+        r = rel[t]
+        jumps = r[(r > jump) | (r < 1 / jump)]
+        used = set()
+        dates = list(jumps.index)
+        for i, d1 in enumerate(dates):
+            if d1 in used:
+                continue
+            for d2 in dates[i + 1:]:
+                months = (d2.year - d1.year) * 12 + d2.month - d1.month
+                if months > max_months:
+                    break
+                if d2 not in used and abs(np.log(jumps[d1] * jumps[d2])) <= np.log(1 + tol):
+                    seg = (out.index >= d1) & (out.index < d2)
+                    out.loc[seg, t] = np.nan
+                    used.update([d1, d2])
+                    log.append({"ticker": t, "inicio": d1, "fim": d2, "meses_descartados": int(seg.sum()),
+                                "motivo": "salto que volta"})
+                    break
+        extremes = [d for d in dates if d not in used and abs(np.log(jumps[d])) >= np.log(extreme) - 1e-9]
+        if extremes:
+            d = max(extremes)
+            seg = out.index < d
+            out.loc[seg, t] = np.nan
+            log.append({"ticker": t, "inicio": out.index[0], "fim": d, "meses_descartados": int(seg.sum()),
+                        "motivo": "salto extremo sem volta"})
+    return out, pd.DataFrame(log, columns=["ticker", "inicio", "fim", "meses_descartados", "motivo"])
 
 
 def implausible_caps(mcap: pd.DataFrame, close_monthly: pd.DataFrame, jump: float = 2.0) -> pd.DataFrame:
