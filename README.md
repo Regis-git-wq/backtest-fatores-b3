@@ -25,18 +25,18 @@ Estratégias de **momentum** e **baixa volatilidade**, documentadas na literatur
 
 | | Momentum | Baixa volatilidade | Combinado | Universo (pesos iguais) | CDI |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **Retorno a.a.** | **16,4%** | 14,7% | 16,3% | 11,9% | 9,7% |
-| **Volatilidade a.a.** | 21,0% | **16,9%** | 18,0% | 22,0% | — |
-| **Sharpe** | 0,40 | 0,35 | **0,42** | 0,20 | — |
+| **Retorno a.a.** | **16,6%** | 14,3% | 16,2% | 11,8% | 9,7% |
+| **Volatilidade a.a.** | 21,1% | **16,6%** | 17,7% | 21,9% | — |
+| **Sharpe** | 0,40 | 0,33 | **0,42** | 0,20 | — |
 | **Drawdown máximo** | −41,3% | **−30,7%** | −32,1% | −36,5% | — |
-| **Alfa a.a. (CAPM)** | +4,7% \* | +2,9% | +4,4% \* | — | — |
+| **Alfa a.a. (CAPM)** | +4,8% \* | +2,6% | +4,3% \* | — | — |
 
 <sub>Melhor tercil de cada estratégia, fev/2011–dez/2025, rebalanceamento mensal, líquido de custos. \* significativo a 5%.</sub>
 
-- 📈 **Momentum e a estratégia combinada geram alfa no período completo.** O melhor tercil de momentum supera o mercado em 4,7% a.a. ajustado ao risco (t = 2,04), e o combinado em 4,4% a.a. (t = 2,37).
-- 🛡️ **Baixa volatilidade entrega mais retorno que o universo com menos risco:** a menor volatilidade e o menor drawdown entre as carteiras. O alfa de 2,9% a.a. não é significativo (t = 1,61).
-- ⚠️ **O ganho vem do ajuste ao risco, não do retorno bruto.** O excesso de retorno simples sobre o universo (3,9% a.a. no momentum) não é significativo (t = 1,50). O alfa aparece porque as carteiras têm beta menor que 1.
-- ⚖️ **As carteiras long-short têm beta negativo** (−0,37 no momentum e −0,74 na baixa volatilidade). O prêmio bruto do momentum é de 8,5% a.a. (t = 1,63), e o alfa de CAPM é de 10,7% a.a. (t = 2,30).
+- 📈 **Momentum e a estratégia combinada geram alfa no período completo.** O melhor tercil de momentum supera o mercado em 4,8% a.a. ajustado ao risco (t = 2,07), e o combinado em 4,3% a.a. (t = 2,56).
+- 🛡️ **Baixa volatilidade entrega mais retorno que o universo com menos risco:** a menor volatilidade e o menor drawdown entre as carteiras. O alfa de 2,6% a.a. não é significativo (t = 1,43).
+- ⚠️ **O ganho vem do ajuste ao risco, não do retorno bruto.** O excesso de retorno simples sobre o universo (4,2% a.a. no momentum) não é significativo (t = 1,61). O alfa aparece porque as carteiras têm beta menor que 1.
+- ⚖️ **As carteiras long-short têm beta negativo** (−0,37 no momentum e −0,73 na baixa volatilidade). O prêmio bruto do momentum é de 8,7% a.a. (t = 1,66), e o alfa de CAPM é de 10,8% a.a. (t = 2,32).
 
 <p align="center">
   <img src="resultados/alfas.png" alt="Alfa anual com intervalo de confiança de 95%" width="100%">
@@ -50,10 +50,10 @@ Em parte. Os testes abaixo mostram onde o resultado é frágil.
   <img src="resultados/robustez.png" alt="Prêmio long-short por subperíodo, ciclo da Selic e especificação" width="100%">
 </p>
 
-- **Concentrado em 2011–2015.** Nesse período o prêmio long-short foi de 27% a.a. no momentum (t = 3,52) e 23% na baixa volatilidade (t = 2,63). De 2016 em diante, o momentum fica perto de zero, e a baixa volatilidade perdeu 26% a.a. em 2016–2020 (t = −2,22).
-- **Melhor em ciclos de alta da Selic.** Nos meses de juros em alta, o melhor tercil de baixa volatilidade superou o universo em 10,8% a.a. (t = 2,88). Com juros estáveis ou em queda, nenhum excesso é significativo.
-- **Sensível a custos.** O excesso do momentum sobre o universo cai de 4,3% a.a. sem custos para 2,4% com 50 bps por lado.
-- **Sensível a poucas ações.** Sem as 5 ações com retornos suspeitos nos dados do Yahoo, o prêmio long-short do momentum cai de 8,5% para 6,1% a.a.
+- **Concentrado em 2011–2015.** Nesse período o prêmio long-short foi de 27% a.a. no momentum (t = 3,51) e 22% na baixa volatilidade (t = 2,56). De 2016 em diante, o momentum fica perto de zero, e a baixa volatilidade perdeu 26% a.a. em 2016–2020 (t = −2,24).
+- **Melhor em ciclos de alta da Selic.** Nos meses de juros em alta, o melhor tercil de baixa volatilidade superou o universo em 10,3% a.a. (t = 2,79). Com juros estáveis ou em queda, nenhum excesso é significativo.
+- **Sensível a custos.** O excesso do momentum sobre o universo cai de 4,5% a.a. sem custos para 2,6% com 50 bps por lado.
+- **Não depende dos erros de dados, mas depende de poucas ações.** A limpeza tratou 10 retornos diários extremos em 5 ações ([relatório](resultados/limpeza_dados.csv)), todos classificados como saltos permanentes (desdobramentos mal ajustados e cisões, como as do GPA). Com ou sem limpeza, o prêmio long-short do momentum fica em 8,7% a.a. Sem essas 5 ações, porém, ele cai para 6,3% a.a.
 - **Quintis** dão prêmios parecidos ou maiores (11,7% a.a. no momentum), também sem significância estatística.
 
 Tabelas: [`robustez_subperiodos.csv`](resultados/robustez_subperiodos.csv), [`robustez_ciclos_selic.csv`](resultados/robustez_ciclos_selic.csv) e [`robustez_especificacoes.csv`](resultados/robustez_especificacoes.csv).

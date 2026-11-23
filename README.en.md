@@ -27,18 +27,18 @@ Do **momentum** and **low-volatility** strategies, well documented in internatio
 
 | | Momentum | Low volatility | Combined | Universe (equal-weighted) | CDI |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **Annual return** | **16.4%** | 14.7% | 16.3% | 11.9% | 9.7% |
-| **Annual volatility** | 21.0% | **16.9%** | 18.0% | 22.0% | — |
-| **Sharpe ratio** | 0.40 | 0.35 | **0.42** | 0.20 | — |
+| **Annual return** | **16.6%** | 14.3% | 16.2% | 11.8% | 9.7% |
+| **Annual volatility** | 21.1% | **16.6%** | 17.7% | 21.9% | — |
+| **Sharpe ratio** | 0.40 | 0.33 | **0.42** | 0.20 | — |
 | **Max drawdown** | −41.3% | **−30.7%** | −32.1% | −36.5% | — |
-| **Annual alpha (CAPM)** | +4.7% \* | +2.9% | +4.4% \* | — | — |
+| **Annual alpha (CAPM)** | +4.8% \* | +2.6% | +4.3% \* | — | — |
 
 <sub>Top tercile of each strategy, Feb 2011–Dec 2025, monthly rebalancing, net of costs. \* significant at 5%.</sub>
 
-- 📈 **Momentum and the combined strategy generate alpha over the full period.** The momentum top tercile beats the market by 4.7% a year on a risk-adjusted basis (t = 2.04); the combined strategy by 4.4% (t = 2.37).
-- 🛡️ **Low volatility earns more than the universe with less risk:** the lowest volatility and shallowest drawdown of all portfolios. Its 2.9% alpha is not significant (t = 1.61).
-- ⚠️ **The gain comes from risk adjustment, not raw return.** The simple excess return over the universe (3.9% a year for momentum) is not significant (t = 1.50). Alpha shows up because the portfolios have betas below 1.
-- ⚖️ **Long-short portfolios have negative market beta** (−0.37 for momentum, −0.74 for low volatility). The raw momentum premium is 8.5% a year (t = 1.63); its CAPM alpha is 10.7% (t = 2.30).
+- 📈 **Momentum and the combined strategy generate alpha over the full period.** The momentum top tercile beats the market by 4.8% a year on a risk-adjusted basis (t = 2.07); the combined strategy by 4.3% (t = 2.56).
+- 🛡️ **Low volatility earns more than the universe with less risk:** the lowest volatility and shallowest drawdown of all portfolios. Its 2.6% alpha is not significant (t = 1.43).
+- ⚠️ **The gain comes from risk adjustment, not raw return.** The simple excess return over the universe (4.2% a year for momentum) is not significant (t = 1.61). Alpha shows up because the portfolios have betas below 1.
+- ⚖️ **Long-short portfolios have negative market beta** (−0.37 for momentum, −0.73 for low volatility). The raw momentum premium is 8.7% a year (t = 1.66); its CAPM alpha is 10.8% (t = 2.32).
 
 <p align="center">
   <img src="resultados/alfas.png" alt="Annual alpha with 95% confidence intervals" width="100%">
@@ -52,10 +52,10 @@ Partly. The tests below show where it is fragile.
   <img src="resultados/robustez.png" alt="Long-short premium by subperiod, Selic cycle and specification" width="100%">
 </p>
 
-- **Concentrated in 2011–2015.** In that period the long-short premium was 27% a year for momentum (t = 3.52) and 23% for low volatility (t = 2.63). From 2016 on, momentum is close to zero, and low volatility lost 26% a year in 2016–2020 (t = −2.22).
-- **Stronger in Selic hiking cycles.** In months of rising policy rates, the low-volatility top tercile beat the universe by 10.8% a year (t = 2.88). With stable or falling rates, no excess return is significant.
-- **Sensitive to costs.** Momentum's excess over the universe falls from 4.3% a year with no costs to 2.4% at 50 bps per side.
-- **Sensitive to a few stocks.** Dropping the 5 stocks with suspicious returns in the Yahoo data cuts the momentum long-short premium from 8.5% to 6.1% a year.
+- **Concentrated in 2011–2015.** In that period the long-short premium was 27% a year for momentum (t = 3.51) and 22% for low volatility (t = 2.56). From 2016 on, momentum is close to zero, and low volatility lost 26% a year in 2016–2020 (t = −2.24).
+- **Stronger in Selic hiking cycles.** In months of rising policy rates, the low-volatility top tercile beat the universe by 10.3% a year (t = 2.79). With stable or falling rates, no excess return is significant.
+- **Sensitive to costs.** Momentum's excess over the universe falls from 4.5% a year with no costs to 2.6% at 50 bps per side.
+- **Not driven by data errors, but dependent on a few stocks.** Cleaning handled 10 extreme daily returns in 5 stocks ([report](resultados/limpeza_dados.csv)), all classified as permanent jumps (mishandled splits and spin-offs, such as GPA's). With or without cleaning, the momentum long-short premium is 8.7% a year. Without those 5 stocks, however, it falls to 6.3%.
 - **Quintiles** give similar or larger premiums (11.7% a year for momentum), also without statistical significance.
 
 Tables: [`robustez_subperiodos.csv`](resultados/robustez_subperiodos.csv), [`robustez_ciclos_selic.csv`](resultados/robustez_ciclos_selic.csv) and [`robustez_especificacoes.csv`](resultados/robustez_especificacoes.csv). Full tables in [`resultados/`](resultados/) (semicolon-separated CSVs, decimal comma).
